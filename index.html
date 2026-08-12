@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>오늘별 — 오늘 밤하늘 관측 정보</title>
+<meta name="description" content="내 위치의 월령, 일출·일몰, 천문박명, 오늘 밤 관측 시간을 한눈에.">
+<meta property="og:title" content="오늘별">
+<meta property="og:description" content="오늘 밤하늘, 얼마나 어두울까? 월령·일출일몰·천문박명을 한눈에.">
+<meta property="og:image" content="https://todaystar.vercel.app/og.png">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0b1026">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-star">✦</span> 오늘별
+  </div>
+  <button id="btn-locate" class="loc-chip" title="위치 다시 잡기">
+    <span id="loc-name">위치 확인 중…</span>
+  </button>
+</header>
+
+<nav class="datenav">
+  <button id="btn-prev" aria-label="이전 날">◀</button>
+  <div class="datenav-center">
+    <div id="date-label" class="date-label">—</div>
+    <button id="btn-today" class="btn-today hidden">오늘로</button>
+  </div>
+  <button id="btn-next" aria-label="다음 날">▶</button>
+</nav>
+
+<main>
+  <!-- 오늘 밤 관측 시간 -->
+  <section class="card card-hero">
+    <div class="card-title">이 밤의 완전한 어둠 <span class="sub">(천문박명 끝 ~ 시작)</span></div>
+    <div id="dark-window" class="hero-time">—</div>
+    <div id="dark-length" class="hero-sub">—</div>
+    <div id="obs-badge" class="badge hidden"></div>
+  </section>
+
+  <!-- 달 -->
+  <section class="card card-moon">
+    <canvas id="moon-canvas" width="140" height="140"></canvas>
+    <div class="moon-info">
+      <div class="card-title">달</div>
+      <div id="moon-phase-name" class="big">—</div>
+      <div id="moon-detail" class="detail">—</div>
+      <div id="moon-times" class="detail">—</div>
+    </div>
+  </section>
+
+  <!-- 해 / 박명 -->
+  <div class="grid2">
+    <section class="card">
+      <div class="card-title">해</div>
+      <div class="row"><span>일출</span><b id="sunrise">—</b></div>
+      <div class="row"><span>일몰</span><b id="sunset">—</b></div>
+    </section>
+    <section class="card">
+      <div class="card-title">저녁 박명 <span class="sub">어두워지는 순서</span></div>
+      <div class="row"><span>시민박명 끝</span><b id="dusk-civil">—</b></div>
+      <div class="row"><span>항해박명 끝</span><b id="dusk-nautical">—</b></div>
+      <div class="row"><span>천문박명 끝</span><b id="dusk-astro">—</b></div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="card">
+      <div class="card-title">새벽 박명 <span class="sub">밝아지는 순서</span></div>
+      <div class="row"><span>천문박명 시작</span><b id="dawn-astro">—</b></div>
+      <div class="row"><span>항해박명 시작</span><b id="dawn-nautical">—</b></div>
+      <div class="row"><span>시민박명 시작</span><b id="dawn-civil">—</b></div>
+    </section>
+    <section class="card">
+      <div class="card-title">한 주 미리보기</div>
+      <div id="week-list" class="week-list"></div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <span id="coords" class="coords">—</span>
+  <span class="credit">오늘별 · 계산은 기기에서 직접 합니다</span>
+</footer>
+
+<script src="suncalc.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
