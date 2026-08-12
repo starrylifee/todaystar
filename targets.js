@@ -209,6 +209,14 @@
   }
 
   /* ---------- 렌더 ---------- */
+  // 실측 하늘 사진 (CDS hips2fits, DSS2 컬러 서베이) — 용량 0, 즉석 생성
+  function thumbURL(o, px) {
+    var fov = o[8] ? Math.min(Math.max((o[8] / 60) * 1.8, 0.15), 8) : 0.5;
+    return "https://alasky.cds.unistra.fr/hips-image-services/hips2fits?hips=CDS%2FP%2FDSS2%2Fcolor" +
+      "&ra=" + o[5] + "&dec=" + o[6] + "&fov=" + fov.toFixed(3) +
+      "&width=" + px + "&height=" + px + "&format=jpg";
+  }
+
   function objTitle(o) {
     var t = "<b>" + o[0] + "</b>";
     if (o[2]) t += " " + o[2];
@@ -229,8 +237,9 @@
     }
     var meta = (TYPE_KO[o[4]] || o[4]) + (o[7] != null ? " · " + o[7].toFixed(1) + "등급" : "");
     return '<div class="t-row" data-i="' + i + '">' +
-      '<div class="t-name">' + objTitle(o) + ' <span class="t-type">' + meta + "</span></div>" +
-      '<div class="t-when ' + (ana.window ? "ok" : "") + '">' + when + "</div></div>";
+      '<img class="t-thumb" loading="lazy" src="' + thumbURL(o, 96) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+      '<div class="t-info"><div class="t-name">' + objTitle(o) + ' <span class="t-type">' + meta + "</span></div>" +
+      '<div class="t-when ' + (ana.window ? "ok" : "") + '">' + when + "</div></div></div>";
   }
 
   function renderList(q) {
@@ -321,8 +330,9 @@
     d.innerHTML =
       '<div class="card">' +
       '<button id="btn-back" class="btn-back">← 목록으로</button>' +
-      '<div class="big" style="margin-top:8px">' + objTitle(o) + "</div>" +
-      '<div class="detail">' + meta + "</div>" +
+      '<div class="d-head"><div><div class="big" style="margin-top:8px">' + objTitle(o) + "</div>" +
+      '<div class="detail">' + meta + "</div></div>" +
+      '<img class="d-thumb" loading="lazy" src="' + thumbURL(o, 220) + '" alt="" onerror="this.style.display=\'none\'"></div>' +
       '<div class="' + badgeCls + '" style="margin-top:10px">' + badge + "</div>" +
       '<canvas id="alt-chart" style="width:100%;height:170px;margin-top:14px"></canvas>' +
       '<div class="chart-legend"><span class="lg-obj">━ 대상</span> <span class="lg-moon">┄ 달</span> · 진한 배경 = 완전한 어둠</div>' +

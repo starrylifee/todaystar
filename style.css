@@ -234,6 +234,26 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   cursor: pointer;
 }
 .t-row:active { opacity: 0.75; }
+.t-row { display: flex; align-items: center; gap: 12px; }
+.t-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #0b1026;
+  flex: none;
+}
+.t-info { flex: 1; min-width: 0; }
+.d-head { display: flex; align-items: flex-start; gap: 14px; justify-content: space-between; }
+.d-thumb {
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #0b1026;
+  flex: none;
+  margin-top: 8px;
+}
 .t-name { font-size: 1.02rem; }
 .t-name b { color: var(--accent); }
 .t-type { color: var(--dim); font-size: 0.8rem; }
