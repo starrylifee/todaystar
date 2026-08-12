@@ -191,6 +191,7 @@
     $("loc-name").textContent = "📍 " + state.name;
     try { localStorage.setItem(LS_KEY, JSON.stringify({ lat: lat, lon: lon, name: state.name })); } catch (e) {}
     render();
+    document.dispatchEvent(new CustomEvent("todaystar:loc"));
   }
 
   function reverseGeocode(lat, lon) {

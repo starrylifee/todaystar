@@ -1,9 +1,11 @@
-var CACHE = "todaystar-v1";
+var CACHE = "todaystar-v2";
 var SHELL = [
   "./",
   "index.html",
   "style.css",
   "app.js",
+  "targets.js",
+  "objects.json",
   "suncalc.js",
   "manifest.json",
   "icons/icon-192.png",

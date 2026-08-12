@@ -152,6 +152,87 @@ footer {
 }
 .coords { opacity: 0.7; }
 
+/* ---------- 하단 탭 ---------- */
+body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  background: rgba(15, 21, 48, 0.96);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--card-edge);
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  gap: 8px;
+  z-index: 10;
+}
+.tabbar button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--dim);
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 11px 0;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tabbar button.active { background: var(--card); color: var(--accent); }
+
+/* ---------- 대상 검색 ---------- */
+.search-wrap { margin-bottom: 12px; }
+#target-search {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 1.05rem;
+  padding: 14px 16px;
+  font-family: inherit;
+  outline: none;
+}
+#target-search:focus { border-color: var(--accent); }
+#target-search::placeholder { color: var(--dim); opacity: 0.7; }
+
+.t-head { color: var(--dim); font-size: 0.85rem; font-weight: 600; margin: 4px 2px 8px; }
+.t-row {
+  background: var(--card);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius);
+  padding: 13px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.t-row:active { opacity: 0.75; }
+.t-name { font-size: 1.02rem; }
+.t-name b { color: var(--accent); }
+.t-type { color: var(--dim); font-size: 0.8rem; }
+.t-when { color: var(--dim); font-size: 0.86rem; margin-top: 3px; }
+.t-when.ok { color: var(--good); }
+
+.btn-back {
+  background: none;
+  border: none;
+  color: var(--dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+.chart-legend {
+  color: var(--dim);
+  font-size: 0.75rem;
+  margin: 6px 0 10px;
+}
+.chart-legend .lg-obj { color: var(--accent); }
+
 @media (min-width: 900px) {
   body { max-width: 640px; }
+  .tabbar { max-width: 640px; }
 }

@@ -26,6 +26,7 @@
   </button>
 </header>
 
+<main id="view-today">
 <nav class="datenav">
   <button id="btn-prev" aria-label="이전 날">◀</button>
   <div class="datenav-center">
@@ -35,7 +36,6 @@
   <button id="btn-next" aria-label="다음 날">▶</button>
 </nav>
 
-<main>
   <!-- 오늘 밤 관측 시간 -->
   <section class="card card-hero">
     <div class="card-title">이 밤의 완전한 어둠 <span class="sub">(천문박명 끝 ~ 시작)</span></div>
@@ -84,12 +84,26 @@
   </div>
 </main>
 
+<section id="view-targets" class="hidden">
+  <div class="search-wrap">
+    <input id="target-search" type="search" inputmode="search" placeholder="M31, NGC 7000, 안드로메다…" autocomplete="off">
+  </div>
+  <div id="target-detail" class="hidden"></div>
+  <div id="target-list"></div>
+</section>
+
 <footer>
   <span id="coords" class="coords">—</span>
   <span class="credit">오늘별 · 계산은 기기에서 직접 합니다</span>
 </footer>
 
+<nav class="tabbar">
+  <button data-view="today" class="active">오늘</button>
+  <button data-view="targets">대상</button>
+</nav>
+
 <script src="suncalc.js"></script>
 <script src="app.js"></script>
+<script src="targets.js"></script>
 </body>
 </html>
