@@ -134,7 +134,6 @@
       var peak = new Date(base.getFullYear(), s[1] - 1, s[2]);
       if (peak < base) peak = new Date(base.getFullYear() + 1, s[1] - 1, s[2]);
       var dd = Math.round((peak - base) / 86400000);
-      if (dd > 75) return;
       var mf = SunCalc.getMoonIllumination(new Date(peak.getFullYear(), peak.getMonth(), peak.getDate(), 23)).fraction;
       var moon = mf < 0.3 ? ["good", "달빛 없음 — 최적"] : mf < 0.6 ? ["ok", "달빛 약간"] : ["bad", "달빛 방해 " + Math.round(mf * 100) + "%"];
       rows.push({ dd: dd, html: '<div class="mt-row' + (dd <= 1 ? " now" : "") + '">' +
@@ -144,10 +143,8 @@
         '<span class="mt-moon ' + moon[0] + '">' + moon[1] + "</span></div>" });
     });
     rows.sort(function (a, b) { return a.dd - b.dd; });
-    box.innerHTML = rows.length
-      ? rows.slice(0, 3).map(function (r) { return r.html; }).join("") +
-        '<div class="detail" style="margin-top:6px">복사점(별자리) 방향이 트인 곳에서, 극대일 밤~새벽이 절정</div>'
-      : '<div class="detail">75일 안에 주요 유성우 없음</div>';
+    box.innerHTML = rows.map(function (r) { return r.html; }).join("") +
+      '<div class="detail" style="margin-top:6px">앞으로 1년치 주요 유성우 · 극대일 밤~새벽이 절정 · 달빛 판정은 그해 극대일 기준</div>';
   }
 
   /* ============ 밤 대기 (7Timer, 프록시 경유) ============ */

@@ -196,8 +196,6 @@
       wk.appendChild(row);
     }
 
-    // 좌표 표시
-    $("coords").textContent = state.name + " · " + lat.toFixed(4) + ", " + lon.toFixed(4);
   }
 
   /* ---------- 위치 ---------- */
