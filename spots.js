@@ -320,7 +320,14 @@
           attribution: "구름: 히마와리 위성(JMA)"
         });
         map.addLayer(
-          { id: "clouds", type: "raster", source: "clouds", paint: { "raster-opacity": 0.55 } },
+          {
+            id: "clouds", type: "raster", source: "clouds",
+            paint: {
+              "raster-opacity": 0.8,
+              "raster-contrast": 0.5,
+              "raster-brightness-min": 0.05
+            }
+          },
           map.getLayer("hills") ? "hills" : undefined
         );
         setCloudFrame(cloudFrames.length - 1);
