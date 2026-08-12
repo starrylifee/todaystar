@@ -24,11 +24,59 @@
     var gmst = (280.46061837 + 360.98564736629 * d) % 360;
     return ((gmst + lon) % 360 + 360) % 360;
   }
-  function gcAlt(date, lat, lon) {
-    var ha = (lstDeg(date, lon) - GC_RA) * Math.PI / 180;
-    var dec = GC_DEC * Math.PI / 180, la = lat * Math.PI / 180;
-    var sa = Math.sin(dec) * Math.sin(la) + Math.cos(dec) * Math.cos(la) * Math.cos(ha);
-    return Math.asin(Math.max(-1, Math.min(1, sa))) * 180 / Math.PI;
+  function altAz(ra, dec, date, lat, lon) {
+    var ha = (lstDeg(date, lon) - ra) * Math.PI / 180;
+    var dr = dec * Math.PI / 180, la = lat * Math.PI / 180;
+    var sa = Math.sin(dr) * Math.sin(la) + Math.cos(dr) * Math.cos(la) * Math.cos(ha);
+    var alt = Math.asin(Math.max(-1, Math.min(1, sa))) * 180 / Math.PI;
+    var az = Math.atan2(-Math.cos(dr) * Math.sin(ha),
+      Math.sin(dr) * Math.cos(la) - Math.cos(dr) * Math.sin(la) * Math.cos(ha)) * 180 / Math.PI;
+    return { alt: alt, az: (az % 360 + 360) % 360 };
+  }
+  function gcAlt(date, lat, lon) { return altAz(GC_RA, GC_DEC, date, lat, lon).alt; }
+  var DIRS = ["북", "북동", "동", "남동", "남", "남서", "서", "북서"];
+  function dirName(az) { return DIRS[Math.floor(((az + 22.5) % 360) / 45)]; }
+
+  // 은하수 띠를 따라가는 이정표 (은경 순서, 순환)
+  var WAY = [
+    ["중심부(궁수)", 266.417, -29.008],
+    ["방패(M11)", 282.8, -6.3],
+    ["독수리(알타이르)", 297.7, 8.87],
+    ["백조(데네브)", 310.36, 45.28],
+    ["카시오페이아", 14.18, 60.72],
+    ["페르세우스", 35.5, 57.15],
+    ["마차부(카펠라)", 79.17, 46.0],
+    ["큰개(시리우스 옆)", 105.4, -15.0]
+  ];
+
+  // 특정 시각 은하수 띠의 흐름 설명: 보이는 이정표의 시작→최고점→끝
+  function bandDesc(date, lat, lon) {
+    var pos = WAY.map(function (w) {
+      var p = altAz(w[1], w[2], date, lat, lon);
+      return { name: w[0], alt: p.alt, az: p.az };
+    });
+    var vis = pos.map(function (p) { return p.alt > 8; });
+    if (vis.every(function (v) { return !v; })) return { text: "띠가 지평선 아래", maxAlt: -90 };
+    // 순환 배열에서 가장 긴 연속 가시 구간 찾기
+    var n = WAY.length, start = -1;
+    for (var i = 0; i < n; i++) {
+      if (!vis[i] && vis[(i + 1) % n]) start = (i + 1) % n;
+    }
+    if (start < 0) start = 0; // 전부 보이는 경우
+    var run = [];
+    for (i = 0; i < n; i++) {
+      var idx = (start + i) % n;
+      if (!vis[idx]) break;
+      run.push(pos[idx]);
+    }
+    var top = run.reduce(function (a, b) { return b.alt > a.alt ? b : a; });
+    function label(p) {
+      return p.name + " " + (p.alt >= 78 ? "천정" : dirName(p.az) + " " + Math.round(p.alt) + "°");
+    }
+    var parts = [label(run[0])];
+    if (top !== run[0] && top !== run[run.length - 1]) parts.push(label(top));
+    if (run.length > 1) parts.push(label(run[run.length - 1]));
+    return { text: parts.join(" → "), maxAlt: top.alt };
   }
   function fmtTime(d) {
     if (!(d instanceof Date) || isNaN(d)) return "—";
@@ -111,6 +159,36 @@
     }
 
     drawMwChart($("mw-chart"), g.dark, loc);
+
+    // 시간대별 상황 (일몰 다음 정시 ~ 일출)
+    var hoursBox = $("mw-hours");
+    var rows = [];
+    var t0 = new Date(g.dark.sunset); t0.setMinutes(0, 0, 0); t0 = t0.getTime() + 3600000;
+    for (var t = t0; t < g.dark.sunrise.getTime(); t += 3600000) {
+      var d = new Date(t);
+      var inDark = t >= g.dark.darkStart.getTime() && t <= g.dark.darkEnd.getTime();
+      var core = altAz(GC_RA, GC_DEC, d, loc.lat, loc.lon);
+      var band = bandDesc(d, loc.lat, loc.lon);
+      var mpos = SunCalc.getMoonPosition(d, loc.lat, loc.lon);
+      var mf = SunCalc.getMoonIllumination(d).fraction;
+      var moonUp = mpos.altitude > 0;
+      var moonOK = !moonUp || mf < MOON_OK;
+      var verdict, cls;
+      if (!inDark) { verdict = "박명 (하늘 밝음)"; cls = "dim"; }
+      else if (!moonOK) { verdict = "달빛 간섭 " + Math.round(mf * 100) + "%"; cls = "warn"; }
+      else if (core.alt >= MIN_ALT) { verdict = "★ 중심부 촬영 최적"; cls = "best"; }
+      else if (band.maxAlt >= 50) { verdict = "밴드 촬영 좋음"; cls = "good"; }
+      else if (band.maxAlt >= 20) { verdict = "밴드 낮음"; cls = "dim"; }
+      else { verdict = "은하수 낮음"; cls = "dim"; }
+      rows.push(
+        '<div class="mw-hour ' + cls + '">' +
+        '<div class="mw-hour-top"><b>' + d.getHours() + "시</b>" +
+        "<span>중심부 " + (core.alt > 0 ? dirName(core.az) + " " + Math.round(core.alt) + "°" : "지평선 아래") + "</span>" +
+        '<span class="mw-verdict">' + verdict + "</span></div>" +
+        '<div class="mw-band">' + band.text + (moonUp && moonOK && inDark ? " · 달 " + Math.round(mf * 100) + "%" : "") + "</div></div>"
+      );
+    }
+    hoursBox.innerHTML = rows.join("");
 
     // 앞으로 30일 중 좋은 밤
     var list = $("mw-days");

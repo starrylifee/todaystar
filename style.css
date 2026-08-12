@@ -311,6 +311,29 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 .mw-dur { color: var(--good); margin-left: auto; }
 .mw-moon { min-width: 3.4em; text-align: right; }
 
+.mw-hour {
+  padding: 8px 0 8px 10px;
+  border-left: 3px solid var(--card-edge);
+  margin-bottom: 8px;
+}
+.mw-hour.best { border-left-color: var(--accent); }
+.mw-hour.good { border-left-color: var(--good); }
+.mw-hour.warn { border-left-color: #e07b5a; }
+.mw-hour-top {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 0.92rem;
+}
+.mw-hour-top b { min-width: 2.6em; }
+.mw-hour-top span { color: var(--dim); font-size: 0.85rem; }
+.mw-verdict { margin-left: auto; font-weight: 700; }
+.mw-hour.best .mw-verdict { color: var(--accent); }
+.mw-hour.good .mw-verdict { color: var(--good); }
+.mw-hour.warn .mw-verdict { color: #e07b5a; }
+.mw-hour.dim .mw-verdict { color: var(--dim); font-weight: 400; }
+.mw-band { color: var(--dim); font-size: 0.8rem; margin-top: 3px; line-height: 1.5; }
+
 /* 자동 스트레칭 적용된 사진은 CSS 밝기 보정 해제 */
 .t-thumb.enhanced, .d-thumb.enhanced, #lightbox-img.enhanced {
   filter: saturate(1.2);
