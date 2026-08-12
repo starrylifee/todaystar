@@ -294,14 +294,17 @@
     var btn = this;
     cloudOn = !cloudOn;
     btn.classList.toggle("on", cloudOn);
-    $("cloud-bar").classList.toggle("hidden", !cloudOn);
+    if (cloudOn && fcOn) $("btn-fc").click(); // 예보 모드 끄기
+    $("cloud-bar").classList.toggle("hidden", !cloudOn && !fcOn);
+    if (cloudTimer) { clearInterval(cloudTimer); cloudTimer = null; $("cloud-play").textContent = "▶"; }
     if (!cloudOn) {
       if (map.getLayer("clouds")) map.setLayoutProperty("clouds", "visibility", "none");
-      if (cloudTimer) { clearInterval(cloudTimer); cloudTimer = null; $("cloud-play").textContent = "▶"; }
       return;
     }
     if (map.getLayer("clouds")) {
       map.setLayoutProperty("clouds", "visibility", "visible");
+      $("cloud-slider").max = cloudFrames.length - 1;
+      setCloudFrame(cloudFrames.length - 1);
       return;
     }
     $("cloud-time").textContent = "불러오는 중…";
@@ -337,23 +340,135 @@
       });
   });
 
+  /* ---------- 구름 예보 (Open-Meteo 격자, +48시간) ---------- */
+  var fcOn = false, fcData = null, fcStart = 0;
+
+  function buildFcGrid() {
+    var lats = [], lons = [];
+    for (var la = 33.0; la <= 38.81; la += 0.4) {
+      for (var lo = 124.6; lo <= 131.01; lo += 0.4) {
+        lats.push(la.toFixed(1)); lons.push(lo.toFixed(1));
+      }
+    }
+    var url = "https://api.open-meteo.com/v1/forecast?latitude=" + lats.join(",") +
+      "&longitude=" + lons.join(",") + "&hourly=cloud_cover&forecast_days=3&timezone=Asia%2FSeoul";
+    return fetch(url).then(function (r) { return r.json(); }).then(function (arr) {
+      if (!Array.isArray(arr)) arr = [arr];
+      var times = arr[0].hourly.time;
+      var now = new Date();
+      var start = 0;
+      for (var i = 0; i < times.length; i++) {
+        if (new Date(times[i]) >= now) { start = Math.max(0, i - 1); break; }
+      }
+      var feats = arr.map(function (p, idx) {
+        var la = p.latitude, lo = p.longitude, h = 0.2;
+        return {
+          type: "Feature", id: idx,
+          geometry: {
+            type: "Polygon",
+            coordinates: [[[lo - h, la - h], [lo + h, la - h], [lo + h, la + h], [lo - h, la + h], [lo - h, la - h]]]
+          },
+          properties: {}
+        };
+      });
+      return {
+        geojson: { type: "FeatureCollection", features: feats },
+        clouds: arr.map(function (p) { return p.hourly.cloud_cover; }),
+        times: times, start: start
+      };
+    });
+  }
+
+  function setFcHour(i) {
+    var hi = fcStart + i;
+    for (var f = 0; f < fcData.clouds.length; f++) {
+      map.setFeatureState({ source: "fc", id: f }, { c: fcData.clouds[f][hi] || 0 });
+    }
+    var t = new Date(fcData.times[hi]);
+    $("cloud-time").textContent = (t.getMonth() + 1) + "/" + t.getDate() + " " + String(t.getHours()).padStart(2, "0") + "시";
+    $("cloud-slider").value = i;
+  }
+
+  function stopPlay() {
+    if (cloudTimer) { clearInterval(cloudTimer); cloudTimer = null; $("cloud-play").textContent = "▶"; }
+  }
+
+  $("btn-fc").addEventListener("click", function () {
+    var btn = this;
+    fcOn = !fcOn;
+    btn.classList.toggle("on", fcOn);
+    if (fcOn && cloudOn) $("btn-cloud").click(); // 위성 모드 끄기
+    $("cloud-bar").classList.toggle("hidden", !fcOn && !cloudOn);
+    stopPlay();
+    if (!fcOn) {
+      if (map.getLayer("fc")) map.setLayoutProperty("fc", "visibility", "none");
+      return;
+    }
+    if (map.getLayer("fc")) {
+      map.setLayoutProperty("fc", "visibility", "visible");
+      $("cloud-slider").max = 48;
+      setFcHour(+$("cloud-slider").value);
+      return;
+    }
+    $("cloud-time").textContent = "예보 불러오는 중…";
+    buildFcGrid().then(function (d) {
+      fcData = d; fcStart = d.start;
+      map.addSource("fc", { type: "geojson", data: d.geojson });
+      map.addLayer({
+        id: "fc", type: "fill", source: "fc",
+        paint: {
+          "fill-color": "#ffffff",
+          "fill-opacity": ["interpolate", ["linear"], ["coalesce", ["feature-state", "c"], 0],
+            0, 0, 25, 0.08, 50, 0.35, 75, 0.6, 100, 0.85],
+          "fill-outline-color": "rgba(0,0,0,0)"
+        }
+      }, map.getLayer("hills") ? "hills" : undefined);
+      $("cloud-slider").max = 48;
+      setFcHour(0);
+    }).catch(function () {
+      $("cloud-time").textContent = "예보 불러오기 실패";
+    });
+  });
+
   $("cloud-slider").addEventListener("input", function () {
-    if (cloudFrames) setCloudFrame(+this.value);
+    if (fcOn && fcData) setFcHour(+this.value);
+    else if (cloudFrames) setCloudFrame(+this.value);
   });
 
   $("cloud-play").addEventListener("click", function () {
-    if (!cloudFrames) return;
-    if (cloudTimer) {
-      clearInterval(cloudTimer); cloudTimer = null;
-      this.textContent = "▶";
-      return;
-    }
+    if (cloudTimer) { stopPlay(); return; }
     this.textContent = "⏸";
+    var max = +$("cloud-slider").max;
     var i = +$("cloud-slider").value;
     cloudTimer = setInterval(function () {
-      i = (i + 1) % cloudFrames.length;
-      setCloudFrame(i);
-    }, 350);
+      i = (i + 1) % (max + 1);
+      if (fcOn && fcData) setFcHour(i);
+      else if (cloudFrames) setCloudFrame(i);
+    }, fcOn ? 500 : 350);
+  });
+
+  /* ---------- 지역명 검색 (Nominatim) ---------- */
+  $("spot-search").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    var q = this.value.trim();
+    if (!q) return;
+    var inp = this;
+    inp.disabled = true;
+    fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kr&accept-language=ko&q=" + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        inp.disabled = false;
+        if (!res.length) {
+          inp.value = "";
+          inp.placeholder = "\"" + q + "\" 검색 결과 없음 — 다른 이름으로 시도";
+          return;
+        }
+        var lat = +res[0].lat, lon = +res[0].lon;
+        map.flyTo({ center: [lon, lat], zoom: 11 });
+        map.once("moveend", function () { pick(lat, lon); });
+        inp.blur();
+      })
+      .catch(function () { inp.disabled = false; });
   });
 
   /* ---------- 탭 연동 ---------- */

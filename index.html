@@ -132,13 +132,17 @@
 </section>
 
 <section id="view-spots" class="hidden">
+  <div class="search-wrap">
+    <input id="spot-search" type="search" inputmode="search" placeholder="지역 검색: 인제, 양평, 몽산포…" autocomplete="off">
+  </div>
   <div id="map-wrap">
     <div id="map"></div>
     <div class="map-btns">
       <button id="btn-me" title="내 위치로">📍</button>
       <button id="btn-3d" title="3D 지형">3D</button>
       <button id="btn-lp" class="on" title="광해 켜기/끄기">광해</button>
-      <button id="btn-cloud" title="구름 위성영상">구름</button>
+      <button id="btn-cloud" title="구름 위성영상 (과거 6시간)">구름</button>
+      <button id="btn-fc" title="구름 예보 (48시간)">예보</button>
     </div>
     <div id="cloud-bar" class="hidden">
       <button id="cloud-play">▶</button>
