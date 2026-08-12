@@ -412,6 +412,23 @@ html.red-mode .red-toggle { border-color: #f66; }
 .mt-moon.ok { color: var(--accent); }
 .mt-moon.bad { color: #e07b5a; }
 
+#planet-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.pl-leg { display: flex; align-items: center; gap: 5px; }
+.pl-leg i {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.pl-leg b { color: var(--text); font-variant-numeric: tabular-nums; }
+
 .at-good { color: var(--good); }
 .at-ok { color: var(--accent); }
 .at-bad { color: #e07b5a; }

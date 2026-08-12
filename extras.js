@@ -89,26 +89,66 @@
     return { s: t.sunset, e: tn.sunrise, ds: isNaN(t.night) ? t.nauticalDusk : t.night, de: isNaN(tn.nightEnd) ? tn.nauticalDawn : tn.nightEnd };
   }
 
+  var PLANET_COLORS = ["#9aa3cf", "#ffe08a", "#ff7a5c", "#ffb46b", "#7fd6c2"];
+
   function renderPlanets(date, lat, lon) {
-    var box = $("planet-list");
-    if (!box) return;
+    var canvas = $("planet-chart");
+    var legend = $("planet-legend");
+    if (!canvas || !legend) return;
     var w = nightSpan(date, lat, lon);
-    var html = "";
+    var mid = new Date((w.s.getTime() + w.e.getTime()) / 2);
+
+    var dpr = window.devicePixelRatio || 1;
+    var W = canvas.clientWidth, H = canvas.clientHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    var g = canvas.getContext("2d");
+    g.scale(dpr, dpr);
+    var padL = 26, padB = 18, padT = 6;
+    var t0 = w.s.getTime(), t1 = w.e.getTime();
+    var X = function (t) { return padL + (t - t0) / (t1 - t0) * (W - padL - 4); };
+    var Y = function (a) { return padT + (1 - a / 90) * (H - padT - padB); };
+
+    // 배경: 박명 / 완전한 어둠
+    g.fillStyle = "#1e2650";
+    g.fillRect(padL, padT, W - padL - 4, H - padT - padB);
+    g.fillStyle = "#0b1026";
+    g.fillRect(X(w.ds.getTime()), padT, X(w.de.getTime()) - X(w.ds.getTime()), H - padT - padB);
+
+    // 눈금
+    g.fillStyle = "#9aa3cf";
+    g.font = "10px sans-serif";
+    g.textAlign = "right";
+    [0, 30, 60, 90].forEach(function (a) { g.fillText(a + "°", padL - 4, Y(a) + 3); });
+    g.textAlign = "center";
+    var d0 = new Date(t0); d0.setMinutes(0, 0, 0);
+    for (var t = d0.getTime(); t <= t1; t += 3600000) {
+      var hh = new Date(t).getHours();
+      if (hh % 2 === 0 && t >= t0) g.fillText(hh + "시", X(t), H - 5);
+    }
+
+    var legendHTML = "";
     PLANETS.forEach(function (pl, pi) {
-      var maxAlt = -90, maxT = null, maxAz = 0;
-      // 행성 좌표는 밤 동안 거의 고정 → 자정 기준 1회 계산
-      var mid = new Date((w.s.getTime() + w.e.getTime()) / 2);
       var rd = planetRaDec(pi, mid);
-      for (var t = w.s.getTime(); t <= w.e.getTime(); t += 10 * 60000) {
+      var maxAlt = -90, maxT = null, maxAz = 0, started = false;
+      g.strokeStyle = PLANET_COLORS[pi];
+      g.lineWidth = 2;
+      g.beginPath();
+      for (var t = t0; t <= t1; t += 10 * 60000) {
         var p = altAzOf(rd.ra, rd.dec, new Date(t), lat, lon);
         if (p.alt > maxAlt) { maxAlt = p.alt; maxT = new Date(t); maxAz = p.az; }
+        if (p.alt < 0) { started = false; continue; }
+        if (!started) { g.moveTo(X(t), Y(p.alt)); started = true; }
+        else g.lineTo(X(t), Y(p.alt));
       }
-      var status;
-      if (maxAlt < 5) status = '<span class="pl-no">이 밤엔 안 보임</span>';
-      else status = "<b>" + fmtTime(maxT) + "</b> 최고 " + Math.round(maxAlt) + "° " + dirName(maxAz);
-      html += '<div class="pl-row"><span class="pl-name">' + pl[0] + "</span><span>" + status + "</span></div>";
+      g.stroke();
+      var status = maxAlt < 5
+        ? '<span class="pl-no">안 보임</span>'
+        : "<b>" + fmtTime(maxT) + "</b> " + Math.round(maxAlt) + "° " + dirName(maxAz);
+      legendHTML += '<span class="pl-leg"><i style="background:' + PLANET_COLORS[pi] + '"></i>' +
+        pl[0] + " " + status + "</span>";
     });
-    box.innerHTML = html;
+    g.lineWidth = 1;
+    legend.innerHTML = legendHTML;
   }
 
   /* ============ 유성우 ============ */
@@ -253,6 +293,91 @@
         box.innerHTML = '<div class="detail">ISS 정보를 불러오지 못했습니다 (배포 환경에서 작동)</div>';
       });
   }
+
+  /* ============ 혜성 (MPC 궤도요소, 매일 갱신) ============ */
+
+  var cometsPromise = null;
+
+  function cometGeo(c, date) {
+    var dMs = Date.UTC(c.T[0], c.T[1] - 1, 1) + (c.T[2] - 1) * 86400000;
+    var dt = (date.getTime() - dMs) / 86400000; // 근일점 이후 일수
+    var d = dayNum(date);
+    var xyz;
+    if (c.e < 0.98) {
+      // 타원 궤도
+      var a = c.q / (1 - c.e);
+      var M = 0.9856076686 / Math.pow(a, 1.5) * dt;
+      xyz = heliXYZ({ N: c.node, i: c.incl, w: c.peri, a: a, e: c.e, M: M });
+    } else {
+      // 포물선 근사 (Barker 방정식)
+      var W = 0.01720209895 * dt / Math.sqrt(2 * c.q * c.q * c.q);
+      var u = Math.cbrt(1.5 * W + Math.sqrt(1 + 2.25 * W * W));
+      var D = u - 1 / u;
+      var v = 2 * Math.atan(D);
+      var r = c.q * (1 + D * D);
+      var N = rev(c.node) * RAD, i = c.incl * RAD, w = rev(c.peri) * RAD;
+      xyz = {
+        x: r * (Math.cos(N) * Math.cos(v + w) - Math.sin(N) * Math.sin(v + w) * Math.cos(i)),
+        y: r * (Math.sin(N) * Math.cos(v + w) + Math.cos(N) * Math.sin(v + w) * Math.cos(i)),
+        z: r * Math.sin(v + w) * Math.sin(i)
+      };
+    }
+    var rSun = Math.sqrt(xyz.x * xyz.x + xyz.y * xyz.y + xyz.z * xyz.z);
+    var s = sunXYZ(d);
+    var x = xyz.x + s.x, y = xyz.y + s.y, z = xyz.z + s.z;
+    var delta = Math.sqrt(x * x + y * y + z * z);
+    var ecl = (23.4393 - 3.563e-7 * d) * RAD;
+    var xe = x, ye = y * Math.cos(ecl) - z * Math.sin(ecl), ze = y * Math.sin(ecl) + z * Math.cos(ecl);
+    return {
+      ra: rev(Math.atan2(ye, xe) / RAD),
+      dec: Math.atan2(ze, Math.sqrt(xe * xe + ye * ye)) / RAD,
+      mag: c.g + 5 * Math.log10(delta) + 2.5 * c.k * Math.log10(rSun)
+    };
+  }
+
+  window.renderComets = function () {
+    var box = $("comet-list");
+    if (!box) return;
+    if (!cometsPromise) {
+      cometsPromise = fetch("api/comets")
+        .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+        .catch(function () { return null; });
+    }
+    box.innerHTML = '<div class="detail">혜성 궤도 불러오는 중…</div>';
+    var loc;
+    try { loc = JSON.parse(localStorage.getItem("todaystar_loc")) || {}; } catch (e) { loc = {}; }
+    var lat = loc.lat || 37.5665, lon = loc.lon || 126.978;
+    cometsPromise.then(function (list) {
+      if (!list) {
+        box.innerHTML = '<div class="detail">혜성 데이터를 불러오지 못했습니다 (배포 환경에서 작동)</div>';
+        return;
+      }
+      var w = nightSpan(new Date(), lat, lon);
+      var mid = new Date((w.ds.getTime() + w.de.getTime()) / 2);
+      var rows = [];
+      list.forEach(function (c) {
+        var geo;
+        try { geo = cometGeo(c, mid); } catch (e) { return; }
+        if (!isFinite(geo.mag) || geo.mag > 12) return;
+        var maxAlt = -90, maxT = null, maxAz = 0, winS = null, winE = null;
+        for (var t = w.ds.getTime(); t <= w.de.getTime(); t += 10 * 60000) {
+          var p = altAzOf(geo.ra, geo.dec, new Date(t), lat, lon);
+          if (p.alt > maxAlt) { maxAlt = p.alt; maxT = new Date(t); maxAz = p.az; }
+          if (p.alt >= 10) { if (!winS) winS = new Date(t); winE = new Date(t); }
+        }
+        rows.push({ mag: geo.mag, html: '<div class="mt-row"><b>' + c.name + "</b>" +
+          "<span>예상 " + geo.mag.toFixed(1) + "등급</span>" +
+          '<span class="mt-zhr">' + (winS
+            ? fmtTime(winS) + "~" + fmtTime(winE) + " · 최고 " + Math.round(maxAlt) + "° " + dirName(maxAz)
+            : "오늘 밤 지평선 아래") + "</span></div>" });
+      });
+      rows.sort(function (a, b) { return a.mag - b.mag; });
+      box.innerHTML = rows.length
+        ? rows.slice(0, 8).map(function (r) { return r.html; }).join("") +
+          '<div class="detail" style="margin-top:6px">12등급보다 밝게 예측되는 혜성 · 실제 밝기는 크게 다를 수 있음</div>'
+        : '<div class="detail">지금 12등급보다 밝게 예측되는 혜성이 없어요</div>';
+    });
+  };
 
   window.TodayStarExtras = {
     render: function (date, lat, lon) {

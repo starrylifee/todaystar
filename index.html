@@ -62,26 +62,15 @@
 
   <!-- 행성 -->
   <section class="card">
-    <div class="card-title">오늘 밤 행성</div>
-    <div id="planet-list">—</div>
-  </section>
-
-  <!-- 유성우 -->
-  <section class="card">
-    <div class="card-title">유성우</div>
-    <div id="meteor-list">—</div>
+    <div class="card-title">오늘 밤 행성 <span class="sub">일몰~일출 고도</span></div>
+    <canvas id="planet-chart" style="width:100%;height:170px"></canvas>
+    <div id="planet-legend"></div>
   </section>
 
   <!-- 밤 대기 -->
   <section class="card">
     <div class="card-title">밤 대기 예보</div>
     <div id="atmos-line">—</div>
-  </section>
-
-  <!-- ISS -->
-  <section class="card">
-    <div class="card-title">ISS 국제우주정거장 통과 <span class="sub">맨눈 관측 이벤트</span></div>
-    <div id="iss-list">—</div>
   </section>
 
   <!-- 해 / 박명 -->
@@ -145,8 +134,23 @@
     <button data-t="neb">성운</button>
     <button data-t="pn">행성상성운</button>
     <button data-t="snr">초신성잔해</button>
+    <button data-t="meteor">유성우</button>
+    <button data-t="iss">ISS</button>
+    <button data-t="comet">혜성</button>
   </div>
   <div id="target-detail" class="hidden"></div>
+  <div id="special-meteor" class="hidden">
+    <div class="t-head">유성우 — 앞으로 1년 <span class="sub">달빛 판정은 그해 극대일 기준</span></div>
+    <div class="card" id="meteor-list">—</div>
+  </div>
+  <div id="special-iss" class="hidden">
+    <div class="t-head">ISS 국제우주정거장 — 3일 내 밝은 통과</div>
+    <div class="card" id="iss-list">—</div>
+  </div>
+  <div id="special-comet" class="hidden">
+    <div class="t-head">지금 볼 만한 혜성 <span class="sub">궤도는 매일 자동 갱신 · 밝기는 추정치</span></div>
+    <div class="card" id="comet-list">—</div>
+  </div>
   <div id="target-list"></div>
 </section>
 

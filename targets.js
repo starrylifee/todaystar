@@ -360,6 +360,7 @@
     var ctx = nightCtx(new Date(), loc.lat, loc.lon);
     var box = $("target-list");
     $("target-detail").classList.add("hidden");
+    if (typeof hideSpecials === "function") hideSpecials();
     box.classList.remove("hidden");
 
     var items, title;
@@ -608,6 +609,14 @@
     b.addEventListener("click", function () { showView(b.dataset.view); });
   });
 
+  var SPECIALS = { meteor: "special-meteor", iss: "special-iss", comet: "special-comet" };
+  function hideSpecials() {
+    for (var k in SPECIALS) {
+      var el = $(SPECIALS[k]);
+      if (el) el.classList.add("hidden");
+    }
+  }
+
   document.querySelectorAll("#type-chips button").forEach(function (b) {
     b.addEventListener("click", function () {
       typeFilter = b.dataset.t;
@@ -615,6 +624,14 @@
         x.classList.toggle("active", x === b);
       });
       current = null;
+      hideSpecials();
+      if (SPECIALS[typeFilter]) {
+        $("target-detail").classList.add("hidden");
+        $("target-list").classList.add("hidden");
+        $(SPECIALS[typeFilter]).classList.remove("hidden");
+        if (typeFilter === "comet" && window.renderComets) window.renderComets();
+        return;
+      }
       renderList($("target-search").value);
     });
   });
