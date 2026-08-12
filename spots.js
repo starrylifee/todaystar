@@ -215,10 +215,25 @@
         '<button id="spot-close" class="btn-back">✕</button></div>' +
         '<div class="detail">' + info.desc + "</div>" +
         '<div class="spot-meta">하늘 밝기 ' + info.mpsas.toFixed(2) + " mag/arcsec² · LP존 " + info.zone +
-        " · 내 위치에서 " + fmtDist(d) + "</div>";
+        " · 내 위치에서 " + fmtDist(d) + "</div>" +
+        '<div class="spot-actions">' +
+        '<button id="spot-toilet-kakao">🚻 주변 화장실 (카카오맵)</button>' +
+        '<button id="spot-toilet-google">구글지도</button>' +
+        "</div>";
       $("spot-close").addEventListener("click", function () {
         card.classList.add("hidden");
         if (marker) marker.remove();
+      });
+      $("spot-toilet-kakao").addEventListener("click", function () {
+        // 폰: 카카오맵 앱 검색, 앱이 없으면 무반응이라 웹 지도로도 안내
+        location.href = "kakaomap://search?q=" + encodeURIComponent("공중화장실") + "&p=" + lat + "," + lon;
+        setTimeout(function () {
+          if (!document.hidden) window.open("https://map.kakao.com/?q=" + encodeURIComponent("공중화장실"), "_blank");
+        }, 1200);
+      });
+      $("spot-toilet-google").addEventListener("click", function () {
+        window.open("https://www.google.com/maps/search/" + encodeURIComponent("공중화장실") +
+          "/@" + lat.toFixed(5) + "," + lon.toFixed(5) + ",14z", "_blank");
       });
     });
   }

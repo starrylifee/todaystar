@@ -426,6 +426,20 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 
 .map-hint { color: var(--dim); font-size: 0.82rem; text-align: center; margin-top: 10px; }
 
+.spot-actions { display: flex; gap: 8px; margin-top: 10px; }
+.spot-actions button {
+  background: var(--bg2);
+  border: 1px solid var(--card-edge);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.spot-actions button:first-child { flex: 1; border-color: var(--accent); color: var(--accent); }
+
 .maplibregl-ctrl-attrib { font-size: 10px; }
 
 @media (min-width: 900px) {
