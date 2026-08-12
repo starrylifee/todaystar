@@ -86,6 +86,26 @@
 </main>
 
 <section id="view-targets" class="hidden">
+  <div class="hours-bar">
+    <span class="hours-label">촬영 시간</span>
+    <select id="hour-start">
+      <option value="">어두워지면</option>
+      <option value="18">저녁 6시</option><option value="19">저녁 7시</option>
+      <option value="20">저녁 8시</option><option value="21">밤 9시</option>
+      <option value="22">밤 10시</option><option value="23">밤 11시</option>
+      <option value="0">자정</option><option value="1">새벽 1시</option>
+      <option value="2">새벽 2시</option>
+    </select>
+    <span class="hours-sep">→</span>
+    <select id="hour-end">
+      <option value="">새벽까지</option>
+      <option value="21">밤 9시</option><option value="22">밤 10시</option>
+      <option value="23">밤 11시</option><option value="0">자정</option>
+      <option value="1">새벽 1시</option><option value="2">새벽 2시</option>
+      <option value="3">새벽 3시</option><option value="4">새벽 4시</option>
+      <option value="5">새벽 5시</option>
+    </select>
+  </div>
   <div class="search-wrap">
     <input id="target-search" type="search" inputmode="search" placeholder="M31, NGC 7000, 안드로메다…" autocomplete="off">
   </div>

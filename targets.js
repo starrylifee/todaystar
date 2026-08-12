@@ -70,7 +70,22 @@
     return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
   }
 
-  // 이 밤의 컨텍스트 (일몰~다음 일출, 천문박명 창)
+  // 사용자 촬영 시간 설정 (1시간 단위, ""=제한 없음)
+  var HOURS_KEY = "todaystar_hours";
+  function getHourPref() {
+    try {
+      var p = JSON.parse(localStorage.getItem(HOURS_KEY));
+      if (p) return p;
+    } catch (e) {}
+    return { s: "", e: "" };
+  }
+  // 18~23시는 당일 저녁, 0~11시는 다음 날 새벽으로 해석
+  function anchorHour(baseDate, h) {
+    var day = h >= 12 ? 0 : 1;
+    return new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + day, h);
+  }
+
+  // 이 밤의 컨텍스트 (일몰~다음 일출, 천문박명 창 ∩ 사용자 설정 시간)
   function nightCtx(baseDate, lat, lon) {
     var noon = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 12);
     var noonNext = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + 1, 12);
@@ -78,7 +93,22 @@
     var tn = SunCalc.getTimes(noonNext, lat, lon);
     var darkStart = isNaN(t.night) ? t.nauticalDusk : t.night;
     var darkEnd = isNaN(tn.nightEnd) ? tn.nauticalDawn : tn.nightEnd;
-    return { sunset: t.sunset, sunrise: tn.sunrise, darkStart: darkStart, darkEnd: darkEnd };
+    var p = getHourPref();
+    var effStart = darkStart, effEnd = darkEnd;
+    if (p.s !== "") {
+      var us = anchorHour(baseDate, +p.s);
+      if (us > effStart) effStart = us;
+    }
+    if (p.e !== "") {
+      var ue = anchorHour(baseDate, +p.e);
+      if (ue < effEnd) effEnd = ue;
+    }
+    return {
+      sunset: t.sunset, sunrise: tn.sunrise,
+      darkStart: darkStart, darkEnd: darkEnd,
+      effStart: effStart, effEnd: effEnd,
+      limited: p.s !== "" || p.e !== ""
+    };
   }
 
   // 하룻밤 분석: 적기 구간(어둠 ∩ 고도 30°↑), 최고 고도
@@ -90,7 +120,7 @@
     for (var t = ctx.sunset.getTime(); t <= ctx.sunrise.getTime(); t += step) {
       var d = new Date(t);
       var p = altAz(ra, dec, d, lat, lon);
-      var inDark = t >= ctx.darkStart.getTime() && t <= ctx.darkEnd.getTime();
+      var inDark = t >= ctx.effStart.getTime() && t <= ctx.effEnd.getTime();
       if (inDark && p.alt > maxAlt) { maxAlt = p.alt; maxT = d; maxAz = p.az; }
       if (inDark && p.alt >= GOOD_ALT) {
         if (!segStart) segStart = d;
@@ -230,7 +260,13 @@
       });
       scored.sort(function (a, b) { return b.score - a.score; });
       items = scored.slice(0, 12);
-      title = "오늘 밤 추천 " + fmtTime(ctx.darkStart) + "~" + fmtTime(ctx.darkEnd) + " 기준";
+      if (ctx.effStart >= ctx.effEnd) {
+        title = "설정한 촬영 시간이 어두운 시간과 겹치지 않아요 (완전한 어둠 " +
+          fmtTime(ctx.darkStart) + "~" + fmtTime(ctx.darkEnd) + ")";
+      } else {
+        title = "오늘 밤 추천 " + fmtTime(ctx.effStart) + "~" + fmtTime(ctx.effEnd) +
+          (ctx.limited ? " (촬영 시간 반영)" : "") + " 기준";
+      }
     }
 
     var html = '<div class="t-head">' + title + "</div>";
@@ -323,6 +359,16 @@
     g.fillRect(X(ctx.darkStart.getTime()), padT,
       X(ctx.darkEnd.getTime()) - X(ctx.darkStart.getTime()), H - padT - padB);
 
+    // 사용자 촬영 시간 경계선
+    if (ctx.limited && ctx.effStart < ctx.effEnd) {
+      g.strokeStyle = "rgba(110,231,160,0.7)";
+      g.setLineDash([5, 3]);
+      [ctx.effStart.getTime(), ctx.effEnd.getTime()].forEach(function (tt) {
+        g.beginPath(); g.moveTo(X(tt), padT); g.lineTo(X(tt), H - padB); g.stroke();
+      });
+      g.setLineDash([]);
+    }
+
     // 30° 기준선
     g.strokeStyle = "rgba(154,163,207,0.5)";
     g.setLineDash([4, 4]);
@@ -397,6 +443,20 @@
   document.querySelectorAll(".tabbar button").forEach(function (b) {
     b.addEventListener("click", function () { showView(b.dataset.view); });
   });
+
+  ["hour-start", "hour-end"].forEach(function (id) {
+    $(id).addEventListener("change", function () {
+      var pref = { s: $("hour-start").value, e: $("hour-end").value };
+      try { localStorage.setItem(HOURS_KEY, JSON.stringify(pref)); } catch (e) {}
+      if (current != null) renderDetail(current);
+      else renderList($("target-search").value);
+    });
+  });
+  (function () {
+    var p = getHourPref();
+    $("hour-start").value = p.s;
+    $("hour-end").value = p.e;
+  })();
 
   var searchTimer = null;
   $("target-search").addEventListener("input", function () {

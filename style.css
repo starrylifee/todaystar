@@ -184,6 +184,30 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 }
 .tabbar button.active { background: var(--card); color: var(--accent); }
 
+/* ---------- 촬영 시간 설정 ---------- */
+.hours-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+.hours-label { color: var(--dim); font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+.hours-sep { color: var(--dim); }
+.hours-bar select {
+  flex: 1;
+  background: var(--bg2);
+  border: 1px solid var(--card-edge);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 9px 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
 /* ---------- 대상 검색 ---------- */
 .search-wrap { margin-bottom: 12px; }
 #target-search {
