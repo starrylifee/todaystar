@@ -294,6 +294,23 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 #lightbox-cap { font-size: 1.1rem; font-weight: 700; }
 .lightbox-hint { color: var(--dim); font-size: 0.8rem; }
 
+/* ---------- 은하수 탭 ---------- */
+.mw-day {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(42, 52, 102, 0.5);
+  font-size: 0.9rem;
+  color: var(--dim);
+}
+.mw-day:last-child { border-bottom: none; }
+.mw-day b { color: var(--text); min-width: 5.5em; }
+.mw-day.today b { color: var(--accent); }
+.mw-day span { font-variant-numeric: tabular-nums; }
+.mw-dur { color: var(--good); margin-left: auto; }
+.mw-moon { min-width: 3.4em; text-align: right; }
+
 /* 자동 스트레칭 적용된 사진은 CSS 밝기 보정 해제 */
 .t-thumb.enhanced, .d-thumb.enhanced, #lightbox-img.enhanced {
   filter: saturate(1.2);

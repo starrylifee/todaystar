@@ -513,7 +513,7 @@
 
   /* ---------- 탭 전환 ---------- */
   function showView(v) {
-    ["today", "targets", "spots"].forEach(function (name) {
+    ["today", "targets", "milkyway", "spots"].forEach(function (name) {
       var el = $("view-" + name);
       if (el) el.classList.toggle("hidden", v !== name);
     });
