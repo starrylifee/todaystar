@@ -13,6 +13,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="maplibre-gl.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -92,6 +93,19 @@
   <div id="target-list"></div>
 </section>
 
+<section id="view-spots" class="hidden">
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div class="map-btns">
+      <button id="btn-me" title="내 위치로">📍</button>
+      <button id="btn-3d" title="3D 지형">3D</button>
+      <button id="btn-lp" class="on" title="광해 켜기/끄기">광해</button>
+    </div>
+    <div id="spot-card" class="hidden"></div>
+  </div>
+  <div class="map-hint">지도를 누르면 그 지점의 밤하늘 어두운 정도를 알려드려요</div>
+</section>
+
 <footer>
   <span id="coords" class="coords">—</span>
   <span class="credit">오늘별 · 계산은 기기에서 직접 합니다</span>
@@ -100,10 +114,13 @@
 <nav class="tabbar">
   <button data-view="today" class="active">오늘</button>
   <button data-view="targets">대상</button>
+  <button data-view="spots">관측지</button>
 </nav>
 
 <script src="suncalc.js"></script>
+<script src="maplibre-gl.js"></script>
 <script src="app.js"></script>
 <script src="targets.js"></script>
+<script src="spots.js"></script>
 </body>
 </html>

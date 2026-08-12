@@ -232,6 +232,70 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 }
 .chart-legend .lg-obj { color: var(--accent); }
 
+/* ---------- 관측지 지도 ---------- */
+#map-wrap {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--card-edge);
+  height: calc(100vh - 210px);
+  min-height: 360px;
+}
+#map { width: 100%; height: 100%; background: #0b1026; }
+
+.map-btns {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 5;
+}
+.map-btns button {
+  background: rgba(15, 21, 48, 0.92);
+  border: 1px solid var(--card-edge);
+  color: var(--text);
+  border-radius: 10px;
+  min-width: 44px;
+  height: 40px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0 10px;
+}
+.map-btns button.on { color: var(--accent); border-color: var(--accent); }
+
+#spot-card {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  background: rgba(15, 21, 48, 0.95);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  z-index: 6;
+}
+.spot-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+.spot-head b { color: var(--accent); }
+.spot-approx { font-size: 0.72rem; color: var(--dim); font-weight: 400; margin-left: 2px; }
+.spot-stars { color: var(--accent); letter-spacing: 2px; font-size: 0.9rem; }
+.spot-head .btn-back { margin-left: auto; font-size: 1rem; }
+.spot-meta { color: var(--dim); font-size: 0.82rem; margin-top: 6px; }
+
+.map-hint { color: var(--dim); font-size: 0.82rem; text-align: center; margin-top: 10px; }
+
+.maplibregl-ctrl-attrib { font-size: 10px; }
+
 @media (min-width: 900px) {
   body { max-width: 640px; }
   .tabbar { max-width: 640px; }

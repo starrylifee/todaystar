@@ -384,8 +384,10 @@
 
   /* ---------- 탭 전환 ---------- */
   function showView(v) {
-    $("view-today").classList.toggle("hidden", v !== "today");
-    $("view-targets").classList.toggle("hidden", v !== "targets");
+    ["today", "targets", "spots"].forEach(function (name) {
+      var el = $("view-" + name);
+      if (el) el.classList.toggle("hidden", v !== name);
+    });
     document.querySelectorAll(".tabbar button").forEach(function (b) {
       b.classList.toggle("active", b.dataset.view === v);
     });
