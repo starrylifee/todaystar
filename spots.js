@@ -9,6 +9,26 @@
   var LP_IMG = "https://djlorenz.github.io/astronomy/image_tiles/tiles" + LP_YEAR + "/tile_{z}_{x}_{y}.png";
   var LP_BIN = "https://djlorenz.github.io/astronomy/binary_tiles/" + LP_YEAR + "/binary_tile_";
 
+  // 전국 별 관측 명소 (좌표는 브이월드 장소검색·주소 지오코딩·OSM으로 검증)
+  var ASTRO_SPOTS = [
+    ["연천 당포성", 38.0235, 126.98542],
+    ["연천 은대리성", 38.0243, 127.05969],
+    ["강릉 안반데기", 37.62259, 128.73966],
+    ["화천 조경철천문대", 38.11858, 127.43403],
+    ["양평 벗고개", 37.57232, 127.39138],
+    ["평창 청옥산 육백마지기", 37.3968, 128.50716],
+    ["정선·영월 만항재", 37.14858, 128.89904],
+    ["영양 반딧불이천문대", 36.83049, 129.26952],
+    ["무주 반디랜드", 36.01282, 127.75804],
+    ["태안 몽산포해수욕장", 36.66836, 126.28347],
+    ["제주 1100고지", 33.35778, 126.46243],
+    ["단양 소백산천문대", 36.93442, 128.45695],
+    ["영월 별마로천문대", 37.19836, 128.48672],
+    ["가평·화천 화악산", 37.99799, 127.5557],
+    ["횡성 태기산", 37.58851, 128.2189],
+    ["고흥 국립청소년우주센터", 34.53298, 127.46826]
+  ];
+
   var map = null, marker = null, meMarker = null, terrainOn = false;
   var tileCache = {}; // "x_y" -> Float32Array(600*600) 밝기비
 
@@ -181,6 +201,20 @@
 
     map.on("click", function (e) {
       pick(e.lngLat.lat, e.lngLat.lng);
+    });
+
+    // 관측 명소 별 마커
+    ASTRO_SPOTS.forEach(function (s) {
+      var el = document.createElement("div");
+      el.className = "star-marker";
+      el.textContent = "⭐";
+      el.title = s[0];
+      new maplibregl.Marker({ element: el }).setLngLat([s[2], s[1]]).addTo(map);
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        map.flyTo({ center: [s[2], s[1]], zoom: 12 });
+        pick(s[1], s[2]);
+      });
     });
   }
 
@@ -504,8 +538,14 @@
     var box = $("spot-results");
     box.classList.remove("hidden");
     box.innerHTML = '<div class="sr-empty">검색 중…</div>';
+    var nq = q.toLowerCase().replace(/\s/g, "");
+    var local = ASTRO_SPOTS.filter(function (s) {
+      return s[0].toLowerCase().replace(/\s|·/g, "").indexOf(nq) >= 0;
+    }).map(function (s) {
+      return { name: "⭐ " + s[0], addr: "별 관측 명소", lat: s[1], lon: s[2] };
+    });
     Promise.all([vworldSearch(q), nominatimSearch(q)]).then(function (rs) {
-      var merged = rs[0].concat(rs[1]).slice(0, 7);
+      var merged = local.concat(rs[0], rs[1]).slice(0, 7);
       if (!merged.length) {
         box.innerHTML = '<div class="sr-empty">"' + q + '" 결과 없음 — 근처 큰 지명(면·읍·산 이름)으로 검색한 뒤 지도에서 직접 눌러보세요</div>';
         return;

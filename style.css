@@ -478,6 +478,12 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 #cloud-bar input[type="range"] { flex: 1; accent-color: var(--accent); }
 #cloud-time { font-size: 0.82rem; color: var(--dim); font-variant-numeric: tabular-nums; min-width: 3.2em; }
 
+.star-marker {
+  font-size: 17px;
+  cursor: pointer;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
+}
+
 .spot-actions { display: flex; gap: 8px; margin-top: 10px; }
 .spot-actions button {
   background: var(--bg2);
