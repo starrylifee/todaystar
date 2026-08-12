@@ -287,6 +287,46 @@
     $("lightbox-img").src = "";
   });
 
+  // 촬영 기록 (기기에 저장)
+  var SHOTS_KEY = "todaystar_shots";
+  function getShots() {
+    try { return JSON.parse(localStorage.getItem(SHOTS_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function toggleShot(name) {
+    var s = getShots();
+    if (s[name]) delete s[name];
+    else s[name] = new Date().toISOString().slice(0, 10);
+    try { localStorage.setItem(SHOTS_KEY, JSON.stringify(s)); } catch (e) {}
+    return !!s[name];
+  }
+  function messierCount(s) {
+    var n = 0;
+    for (var k in s) if (/^M\d+$/.test(k)) n++;
+    return n;
+  }
+
+  // 드워프 미니 화각: 망원 150mm f/5, IMX662 → 약 2.1° × 1.2°
+  var DWARF_FOV = { long: 2.1, short: 1.2, diag: 2.45 };
+
+  function dwarfVerdict(sizeArcmin) {
+    if (sizeArcmin == null) return null;
+    var s = sizeArcmin / 60;
+    if (s > DWARF_FOV.diag) return ["warn", "화각(2.1°×1.2°)보다 큼 — 모자이크 촬영 또는 중심부만"];
+    if (s >= DWARF_FOV.short) return ["best", "화면에 꽉 참 — 드워프 미니 최적 대상"];
+    if (s >= 0.35) return ["good", "화면의 30~100% — 잘 어울림"];
+    if (s >= 0.1) return ["ok", "작게 나옴 — 촬영 후 크롭 필요"];
+    return ["small", "매우 작음 — 드워프 미니로는 점으로 보임"];
+  }
+
+  function focalRec(sizeArcmin) {
+    if (sizeArcmin == null) return null;
+    var s = sizeArcmin / 60;
+    var f = Math.round(690 / s / 10) * 10; // 풀프레임에서 세로의 절반을 채우는 초점거리
+    if (f < 85) return "광각~표준 렌즈 (약 " + Math.max(f, 14) + "mm)";
+    if (f > 2000) return "장초점 망원경 영역 (2,000mm 이상)";
+    return "약 " + f + "mm (풀프레임 기준)";
+  }
+
   function objTitle(o) {
     var t = "<b>" + o[0] + "</b>";
     if (o[2]) t += " " + o[2];
@@ -308,9 +348,10 @@
     var meta = (TYPE_KO[o[4]] || o[4]) +
       (o[7] != null ? " · " + o[7].toFixed(1) + "등급" : "") +
       (o[8] != null ? " · " + (o[8] >= 60 ? (o[8] / 60).toFixed(1) + "°" : Math.round(o[8]) + "′") : "");
+    var shotMark = getShots()[o[0]] ? '<span class="shot-mark">✓</span> ' : "";
     return '<div class="t-row" data-i="' + i + '">' +
       '<img class="t-thumb" loading="lazy" data-src="' + thumbURL(o, 96) + '" alt="">' +
-      '<div class="t-info"><div class="t-name">' + objTitle(o) + ' <span class="t-type">' + meta + "</span></div>" +
+      '<div class="t-info"><div class="t-name">' + shotMark + objTitle(o) + ' <span class="t-type">' + meta + "</span></div>" +
       '<div class="t-when ' + (ana.window ? "ok" : "") + '">' + when + "</div></div></div>";
   }
 
@@ -353,6 +394,9 @@
       }
     }
 
+    var shots = getShots();
+    var mc = messierCount(shots);
+    if (mc > 0) title += " · 📷 메시에 " + mc + "/110";
     var html = '<div class="t-head">' + title + "</div>";
     items.forEach(function (it) {
       var i = typeof it === "number" ? it : it.i;
@@ -423,6 +467,15 @@
       (seas ? '<div class="row"><span>촬영 시즌</span><b>' + seas + "</b></div>"
             : '<div class="row"><span>촬영 시즌</span><b>이 위도에서는 늘 낮음</b></div>') +
       (moonNote ? '<div class="row"><span>오늘 달</span><b>' + moonNote + "</b></div>" : "") +
+      (function () {
+        var dv = dwarfVerdict(o[8]);
+        var fr = focalRec(o[8]);
+        var h = "";
+        if (dv) h += '<div class="row"><span>드워프 미니</span><b class="dw-' + dv[0] + '">' + dv[1] + "</b></div>";
+        if (fr) h += '<div class="row"><span>추천 초점거리</span><b>' + fr + "</b></div>";
+        return h;
+      })() +
+      '<button id="btn-shot" class="shot-btn"></button>' +
       "</div>";
     d.classList.remove("hidden");
     $("target-list").classList.add("hidden");
@@ -430,6 +483,14 @@
       current = null;
       renderList($("target-search").value);
     });
+    var shotBtn = $("btn-shot");
+    function shotBtnUI(on) {
+      shotBtn.textContent = on ? "✓ 촬영 완료 — 누르면 해제" : "📷 이 대상 찍었다고 기록";
+      shotBtn.classList.toggle("done", on);
+    }
+    shotBtnUI(!!getShots()[o[0]]);
+    shotBtn.addEventListener("click", function () { shotBtnUI(toggleShot(o[0])); });
+
     var dth = d.querySelector(".d-thumb");
     if (dth) {
       dth.addEventListener("click", function (e) {

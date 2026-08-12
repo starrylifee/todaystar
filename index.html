@@ -22,9 +22,12 @@
   <div class="brand">
     <span class="brand-star">✦</span> 오늘별
   </div>
-  <button id="btn-locate" class="loc-chip" title="위치 다시 잡기">
-    <span id="loc-name">위치 확인 중…</span>
-  </button>
+  <div class="topbar-right">
+    <button id="btn-red" class="red-toggle" title="적색 모드 (암적응 보호)">🔴</button>
+    <button id="btn-locate" class="loc-chip" title="위치 다시 잡기">
+      <span id="loc-name">위치 확인 중…</span>
+    </button>
+  </div>
 </header>
 
 <main id="view-today">
@@ -55,6 +58,30 @@
       <div id="moon-detail" class="detail">—</div>
       <div id="moon-times" class="detail">—</div>
     </div>
+  </section>
+
+  <!-- 행성 -->
+  <section class="card">
+    <div class="card-title">오늘 밤 행성</div>
+    <div id="planet-list">—</div>
+  </section>
+
+  <!-- 유성우 -->
+  <section class="card">
+    <div class="card-title">유성우</div>
+    <div id="meteor-list">—</div>
+  </section>
+
+  <!-- 밤 대기 -->
+  <section class="card">
+    <div class="card-title">밤 대기 예보</div>
+    <div id="atmos-line">—</div>
+  </section>
+
+  <!-- ISS -->
+  <section class="card">
+    <div class="card-title">ISS 국제우주정거장 통과 <span class="sub">맨눈 관측 이벤트</span></div>
+    <div id="iss-list">—</div>
   </section>
 
   <!-- 해 / 박명 -->
@@ -185,6 +212,8 @@
 <script src="suncalc.js"></script>
 <script src="maplibre-gl.js"></script>
 <script src="weather.js"></script>
+<script src="satellite.min.js"></script>
+<script src="extras.js"></script>
 <script src="app.js"></script>
 <script src="targets.js"></script>
 <script src="milkyway.js"></script>

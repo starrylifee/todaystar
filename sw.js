@@ -1,4 +1,4 @@
-var CACHE = "todaystar-v14";
+var CACHE = "todaystar-v15";
 var SHELL = [
   "./",
   "index.html",
@@ -10,6 +10,8 @@ var SHELL = [
   "spots.js",
   "objects.json",
   "suncalc.js",
+  "extras.js",
+  "satellite.min.js",
   "maplibre-gl.js",
   "maplibre-gl.css",
   "manifest.json",

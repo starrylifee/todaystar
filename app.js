@@ -132,12 +132,18 @@
     cn.textContent = "";
     if (window.getClouds && isValid(darkStart) && isValid(darkEnd)) {
       window.getClouds(lat, lon).then(function (cd) {
+        if (!sameDay(d, state.date)) return;
         var avg = window.cloudAvg(cd, darkStart.getTime(), darkEnd.getTime());
-        if (avg != null && sameDay(d, state.date)) {
-          cn.textContent = window.cloudLabel(avg) + " (밤 평균 예보)";
-        }
+        var parts = [];
+        if (avg != null) parts.push(window.cloudLabel(avg));
+        var dew = window.dewInfo ? window.dewInfo(cd, darkStart.getTime(), darkEnd.getTime()) : null;
+        if (dew && dew.level > 0) parts.push(dew.text);
+        cn.textContent = parts.join(" · ");
       });
     }
+
+    // 행성·유성우·대기·ISS 카드
+    if (window.TodayStarExtras) window.TodayStarExtras.render(d, lat, lon);
 
     // 달 정보: 밤의 중간 시각 기준
     var midNight = (isValid(darkStart) && isValid(darkEnd))
@@ -259,6 +265,17 @@
   }
 
   /* ---------- 이벤트 ---------- */
+
+  // 적색 모드 (암적응 보호)
+  var RED_KEY = "todaystar_red";
+  function setRed(on) {
+    document.documentElement.classList.toggle("red-mode", on);
+    try { localStorage.setItem(RED_KEY, on ? "1" : ""); } catch (e) {}
+  }
+  $("btn-red").addEventListener("click", function () {
+    setRed(!document.documentElement.classList.contains("red-mode"));
+  });
+  try { if (localStorage.getItem(RED_KEY)) setRed(true); } catch (e) {}
 
   $("btn-prev").addEventListener("click", function () { state.date = addDays(state.date, -1); render(); });
   $("btn-next").addEventListener("click", function () { state.date = addDays(state.date, 1); render(); });

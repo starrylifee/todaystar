@@ -364,6 +364,76 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 .mw-cloud-some { color: var(--accent); }
 .mw-cloudcol { min-width: 4.2em; text-align: right; font-size: 0.82rem; }
 
+/* ---------- 적색 모드 (암적응 보호) ---------- */
+html.red-mode body,
+html.red-mode .tabbar,
+html.red-mode #lightbox {
+  filter: sepia(1) saturate(5) hue-rotate(-50deg) brightness(0.72) contrast(1.05);
+}
+html.red-mode { background: #000; }
+.topbar-right { display: flex; align-items: center; gap: 8px; max-width: 60%; }
+.red-toggle {
+  background: var(--card);
+  border: 1px solid var(--card-edge);
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  flex: none;
+}
+html.red-mode .red-toggle { border-color: #f66; }
+
+/* ---------- 행성·유성우·ISS 카드 ---------- */
+.pl-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 5px 0;
+  font-size: 0.92rem;
+}
+.pl-name { color: var(--dim); font-size: 0.88rem; }
+.pl-no { color: var(--dim); opacity: 0.6; font-size: 0.85rem; }
+.pl-row b { font-variant-numeric: tabular-nums; }
+
+.mt-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 0;
+  font-size: 0.85rem;
+  color: var(--dim);
+  flex-wrap: wrap;
+}
+.mt-row b { color: var(--text); font-size: 0.92rem; }
+.mt-row.now b { color: var(--accent); }
+.mt-zhr { margin-left: auto; }
+.mt-moon.good { color: var(--good); }
+.mt-moon.ok { color: var(--accent); }
+.mt-moon.bad { color: #e07b5a; }
+
+.at-good { color: var(--good); }
+.at-ok { color: var(--accent); }
+.at-bad { color: #e07b5a; }
+
+.shot-mark { color: var(--good); font-weight: 800; }
+.shot-btn {
+  width: 100%;
+  margin-top: 12px;
+  background: var(--bg2);
+  border: 1px solid var(--card-edge);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.shot-btn.done { border-color: var(--good); color: var(--good); background: rgba(110, 231, 160, 0.08); }
+.dw-best { color: var(--good); }
+.dw-warn { color: var(--accent); }
+
 /* 자동 스트레칭 적용된 사진은 CSS 밝기 보정 해제 */
 .t-thumb.enhanced, .d-thumb.enhanced, #lightbox-img.enhanced {
   filter: saturate(1.2);
