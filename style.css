@@ -426,6 +426,32 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 
 .map-hint { color: var(--dim); font-size: 0.82rem; text-align: center; margin-top: 10px; }
 
+.search-wrap { position: relative; }
+#spot-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: rgba(15, 21, 48, 0.97);
+  border: 1px solid var(--card-edge);
+  border-radius: 12px;
+  z-index: 20;
+  overflow: hidden;
+}
+.sr-item {
+  padding: 11px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: 1px solid rgba(42, 52, 102, 0.5);
+}
+.sr-item:last-child { border-bottom: none; }
+.sr-item:active { background: var(--card); }
+.sr-item b { font-size: 0.95rem; }
+.sr-item span { color: var(--dim); font-size: 0.78rem; }
+.sr-empty { padding: 12px 14px; color: var(--dim); font-size: 0.85rem; line-height: 1.5; }
+
 #cloud-bar {
   position: absolute;
   left: 10px;

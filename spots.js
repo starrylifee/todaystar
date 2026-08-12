@@ -447,28 +447,77 @@
     }, fcOn ? 500 : 350);
   });
 
-  /* ---------- 지역명 검색 (Nominatim) ---------- */
+  /* ---------- 지역·장소 검색 (브이월드 + Nominatim 동시) ---------- */
+  function vworldSearch(q) {
+    return new Promise(function (resolve) {
+      var cb = "_vwcb" + Math.floor(Math.random() * 1e6);
+      var done = false;
+      var s = document.createElement("script");
+      function finish(items) {
+        if (done) return;
+        done = true;
+        delete window[cb];
+        s.remove();
+        resolve(items);
+      }
+      window[cb] = function (d) {
+        var items = [];
+        try {
+          (d.response.result.items || []).forEach(function (it) {
+            var addr = (it.address && (it.address.parcel || it.address.road)) || "";
+            items.push({ name: it.title, addr: addr, lat: +it.point.y, lon: +it.point.x });
+          });
+        } catch (e) {}
+        finish(items);
+      };
+      s.src = "https://api.vworld.kr/req/search?service=search&request=search&version=2.0&type=place&size=5&format=json" +
+        "&key=" + VWORLD_KEY + "&query=" + encodeURIComponent(q) + "&callback=" + cb;
+      s.onerror = function () { finish([]); };
+      document.head.appendChild(s);
+      setTimeout(function () { finish([]); }, 6000);
+    });
+  }
+
+  function nominatimSearch(q) {
+    return fetch("https://nominatim.openstreetmap.org/search?format=json&limit=4&countrycodes=kr&accept-language=ko&q=" + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        return res.map(function (x) {
+          var parts = x.display_name.split(",");
+          return { name: parts[0].trim(), addr: parts.slice(1, 3).join(",").trim(), lat: +x.lat, lon: +x.lon };
+        });
+      })
+      .catch(function () { return []; });
+  }
+
+  function goToResult(r) {
+    $("spot-results").classList.add("hidden");
+    $("spot-search").blur();
+    map.flyTo({ center: [r.lon, r.lat], zoom: 12 });
+    map.once("moveend", function () { pick(r.lat, r.lon); });
+  }
+
   $("spot-search").addEventListener("keydown", function (e) {
     if (e.key !== "Enter") return;
     var q = this.value.trim();
     if (!q) return;
-    var inp = this;
-    inp.disabled = true;
-    fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kr&accept-language=ko&q=" + encodeURIComponent(q))
-      .then(function (r) { return r.json(); })
-      .then(function (res) {
-        inp.disabled = false;
-        if (!res.length) {
-          inp.value = "";
-          inp.placeholder = "\"" + q + "\" 검색 결과 없음 — 다른 이름으로 시도";
-          return;
-        }
-        var lat = +res[0].lat, lon = +res[0].lon;
-        map.flyTo({ center: [lon, lat], zoom: 11 });
-        map.once("moveend", function () { pick(lat, lon); });
-        inp.blur();
-      })
-      .catch(function () { inp.disabled = false; });
+    var box = $("spot-results");
+    box.classList.remove("hidden");
+    box.innerHTML = '<div class="sr-empty">검색 중…</div>';
+    Promise.all([vworldSearch(q), nominatimSearch(q)]).then(function (rs) {
+      var merged = rs[0].concat(rs[1]).slice(0, 7);
+      if (!merged.length) {
+        box.innerHTML = '<div class="sr-empty">"' + q + '" 결과 없음 — 근처 큰 지명(면·읍·산 이름)으로 검색한 뒤 지도에서 직접 눌러보세요</div>';
+        return;
+      }
+      box.innerHTML = merged.map(function (r, i) {
+        return '<div class="sr-item" data-i="' + i + '"><b>' + r.name + "</b><span>" + (r.addr || "") + "</span></div>";
+      }).join("");
+      box.querySelectorAll(".sr-item").forEach(function (el) {
+        el.addEventListener("click", function () { goToResult(merged[+el.dataset.i]); });
+      });
+      if (merged.length === 1) goToResult(merged[0]);
+    });
   });
 
   /* ---------- 탭 연동 ---------- */
