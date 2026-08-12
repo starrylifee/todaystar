@@ -525,6 +525,9 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   font-family: inherit;
 }
 .spot-actions button:first-child { flex: 1; border-color: var(--accent); color: var(--accent); }
+.toilet-row { align-items: center; margin-top: 8px; }
+.toilet-label { color: var(--dim); font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+.toilet-row button { flex: 1; border-color: var(--card-edge) !important; color: var(--text) !important; }
 
 .maplibregl-ctrl-attrib { font-size: 10px; }
 

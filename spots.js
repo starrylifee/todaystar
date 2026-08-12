@@ -252,8 +252,11 @@
         " · 내 위치에서 " + fmtDist(d) + "</div>" +
         '<div class="spot-actions">' +
         '<button id="spot-setloc">📍 여기를 기준 위치로</button>' +
-        '<button id="spot-toilet-kakao">🚻 화장실</button>' +
-        '<button id="spot-toilet-google">구글</button>' +
+        "</div>" +
+        '<div class="spot-actions toilet-row">' +
+        '<span class="toilet-label">🚻 주변 화장실</span>' +
+        '<button id="spot-toilet-kakao">카카오맵</button>' +
+        '<button id="spot-toilet-google">구글지도</button>' +
         "</div>";
       $("spot-close").addEventListener("click", function () {
         card.classList.add("hidden");
