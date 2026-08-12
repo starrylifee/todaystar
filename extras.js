@@ -243,10 +243,12 @@
         var obs = { latitude: lat * RAD, longitude: lon * RAD, height: 0.1 };
         var passes = [], cur = null;
         var now = Date.now();
-        for (var t = now; t < now + 72 * 3600000; t += 20000) {
+        var DAY = 86400000;
+
+        function evalAt(t) {
           var d = new Date(t);
           var pv = satellite.propagate(rec, d);
-          if (!pv.position) continue;
+          if (!pv.position) return;
           var gmst = satellite.gstime(d);
           var ecf = satellite.eciToEcf(pv.position, gmst);
           var la = satellite.ecfToLookAngles(obs, ecf);
@@ -273,25 +275,160 @@
           } else if (cur) {
             if (cur.vis) passes.push(cur);
             cur = null;
-            if (passes.length >= 3) break;
           }
         }
-        if (!passes.length) {
-          box.innerHTML = '<div class="detail">앞으로 3일 안엔 밝게 보이는 통과가 없어요</div>';
-          return;
+
+        // 30일치를 하루 단위로 나눠 계산 (UI 멈춤 방지)
+        var dayIdx = 0;
+        function crunchDay() {
+          var from = now + dayIdx * DAY, to = Math.min(from + DAY, now + 30 * DAY);
+          for (var t = from; t < to; t += 30000) evalAt(t);
+          dayIdx++;
+          if (dayIdx < 30) {
+            box.innerHTML = '<div class="detail">통과 계산 중… ' + dayIdx + "/30일</div>";
+            setTimeout(crunchDay, 0);
+          } else {
+            if (cur && cur.vis) passes.push(cur);
+            done();
+          }
         }
-        var W = ["일", "월", "화", "수", "목", "금", "토"];
-        box.innerHTML = passes.map(function (p) {
-          var d0 = p.visStart || p.start;
-          return '<div class="pl-row"><span class="pl-name">' +
-            (d0.getMonth() + 1) + "/" + d0.getDate() + " (" + W[d0.getDay()] + ")</span>" +
-            "<span><b>" + fmtTime(d0) + "</b> · 최고 " + Math.round(p.maxEl) + "° " + dirName(rev(p.maxAz)) +
-            " · " + Math.round((p.end - p.start) / 60000) + "분간</span></div>";
-        }).join("") + '<div class="detail" style="margin-top:6px">밝은 별처럼 움직이는 점 — 맨눈으로 보입니다</div>';
+        crunchDay();
+
+        function done() {
+          var tf = '<div class="detail" style="margin-top:6px">' +
+            "밝은 별처럼 움직이는 점 — 맨눈으로 보입니다 · 먼 날짜일수록 시각 오차(±분)가 커집니다</div>";
+          var listHTML;
+          if (!passes.length) {
+            listHTML = '<div class="detail">앞으로 30일 안엔 밝게 보이는 통과가 없어요</div>' + tf;
+          } else {
+            var W = ["일", "월", "화", "수", "목", "금", "토"];
+            listHTML = passes.slice(0, 12).map(function (p) {
+              var d0 = p.visStart || p.start;
+              return '<div class="pl-row"><span class="pl-name">' +
+                (d0.getMonth() + 1) + "/" + d0.getDate() + " (" + W[d0.getDay()] + ")</span>" +
+                "<span><b>" + fmtTime(d0) + "</b> · 최고 " + Math.round(p.maxEl) + "° " + dirName(rev(p.maxAz)) +
+                " · " + Math.round((p.end - p.start) / 60000) + "분간</span></div>";
+            }).join("") + tf;
+          }
+          box.innerHTML = listHTML +
+            '<div class="t-head" style="margin-top:14px">🌗 달·태양 면 통과 (5일 이내, 내 위치 기준)</div>' +
+            '<div id="transit-list" class="detail">계산 중…</div>';
+          scanTransits(rec, lat, lon);
+        }
       })
       .catch(function () {
         box.innerHTML = '<div class="detail">ISS 정보를 불러오지 못했습니다 (배포 환경에서 작동)</div>';
       });
+  }
+
+  /* ============ ISS 달·태양 면 통과 (astronomy-engine 정밀 천체력) ============ */
+
+  function scanTransits(rec, lat, lon) {
+    var out = $("transit-list");
+    if (!out) return;
+    if (typeof Astronomy === "undefined") { out.textContent = "정밀 천체력 로드 실패"; return; }
+    var obs = new Astronomy.Observer(lat, lon, 100);
+    var obsGd = { latitude: lat * RAD, longitude: lon * RAD, height: 0.1 };
+
+    function issAltAz(t) {
+      var d = new Date(t);
+      var pv = satellite.propagate(rec, d);
+      if (!pv.position) return null;
+      var la = satellite.ecfToLookAngles(obsGd, satellite.eciToEcf(pv.position, satellite.gstime(d)));
+      return { alt: la.elevation / RAD, az: la.azimuth / RAD };
+    }
+    function bodyAltAz(body, t) {
+      var d = new Date(t);
+      var eq = Astronomy.Equator(body, d, obs, true, true);
+      var hz = Astronomy.Horizon(d, obs, eq.ra, eq.dec, "");
+      return { alt: hz.altitude, az: hz.azimuth };
+    }
+    function sep(a, b) {
+      var a1 = a.alt * RAD, a2 = b.alt * RAD, dz = (a.az - b.az) * RAD;
+      var s = Math.sin(a1) * Math.sin(a2) + Math.cos(a1) * Math.cos(a2) * Math.cos(dz);
+      return Math.acos(Math.max(-1, Math.min(1, s))) / RAD;
+    }
+    // 달·해 위치는 30초마다 계산하고 사이는 직선 보간
+    function interpBody(body, t, cache) {
+      var k = Math.floor(t / 30000) * 30000;
+      var p0 = cache[k] || (cache[k] = bodyAltAz(body, k));
+      var p1 = cache[k + 30000] || (cache[k + 30000] = bodyAltAz(body, k + 30000));
+      var f = (t - k) / 30000;
+      var daz = p1.az - p0.az;
+      if (daz > 180) daz -= 360;
+      if (daz < -180) daz += 360;
+      return { alt: p0.alt + (p1.alt - p0.alt) * f, az: rev(p0.az + daz * f) };
+    }
+
+    var moonCache = {}, sunCache = {};
+    var events = [];
+    var now = Date.now();
+    var DAY = 86400000;
+    var dayIdx = 0;
+
+    function crunch() {
+      var from = now + dayIdx * DAY, to = from + DAY;
+      for (var t = from; t < to; t += 30000) {
+        var iss = issAltAz(t);
+        if (!iss || iss.alt < 5) continue;
+        // ISS가 5° 이상 떠 있는 시간대만 1초 간격 정밀 스캔
+        for (var tt = t; tt < t + 30000; tt += 1000) {
+          var i2 = issAltAz(tt);
+          if (!i2 || i2.alt < 5) continue;
+          [["달", "Moon", moonCache], ["태양", "Sun", sunCache]].forEach(function (B) {
+            var b = interpBody(B[1], tt, B[2]);
+            if (b.alt < 3) return;
+            var s = sep(i2, b);
+            if (s < 1.2) {
+              // 0.1초 간격 정밀화
+              var best = s, bestT = tt;
+              for (var ft = tt - 1000; ft <= tt + 1000; ft += 100) {
+                var fi = issAltAz(ft);
+                if (!fi) continue;
+                var fs = sep(fi, interpBody(B[1], ft, B[2]));
+                if (fs < best) { best = fs; bestT = ft; }
+              }
+              var last = events[events.length - 1];
+              if (last && last.body === B[0] && Math.abs(last.t - bestT) < 120000) {
+                if (best < last.sep) { last.sep = best; last.t = bestT; last.alt = i2.alt; }
+              } else {
+                events.push({ body: B[0], t: bestT, sep: best, alt: i2.alt });
+              }
+            }
+          });
+        }
+      }
+      dayIdx++;
+      if (dayIdx < 5) {
+        out.textContent = "계산 중… " + dayIdx + "/5일";
+        setTimeout(crunch, 0);
+      } else {
+        report();
+      }
+    }
+
+    function report() {
+      var hits = events.filter(function (e) { return e.sep < 0.6; });
+      if (!hits.length) {
+        out.innerHTML = "5일 안엔 내 위치에서 달·태양 면 통과가 없어요. " +
+          '통과 경로가 폭 5~10km라 <a href="https://transit-finder.com/" target="_blank" style="color:var(--accent)">Transit Finder</a>에서 근처 경로도 확인해보세요.';
+        return;
+      }
+      var W = ["일", "월", "화", "수", "목", "금", "토"];
+      out.innerHTML = hits.map(function (e) {
+        var d = new Date(e.t);
+        var kind = e.sep <= 0.28 ? "🎯 면 통과!" : "근접 통과 (이격 " + e.sep.toFixed(2) + "°)";
+        return '<div class="pl-row"><span class="pl-name">' + (d.getMonth() + 1) + "/" + d.getDate() +
+          " (" + W[d.getDay()] + ")</span><span><b>" +
+          fmtTime(d) + ":" + String(d.getSeconds()).padStart(2, "0") + "</b> · " + e.body + " · " + kind +
+          " · 고도 " + Math.round(e.alt) + "°</span></div>";
+      }).join("") +
+        '<div class="detail" style="margin-top:6px">경로 폭이 좁아 몇 km만 이동해도 결과가 달라집니다 — 출발 전 ' +
+        '<a href="https://transit-finder.com/" target="_blank" style="color:var(--accent)">Transit Finder</a>로 재확인 · ' +
+        "⚠️ 태양 통과는 태양필터 필수</div>";
+    }
+
+    crunch();
   }
 
   /* ============ 혜성 (MPC 궤도요소, 매일 갱신) ============ */
@@ -365,19 +502,121 @@
           if (p.alt > maxAlt) { maxAlt = p.alt; maxT = new Date(t); maxAz = p.az; }
           if (p.alt >= 10) { if (!winS) winS = new Date(t); winE = new Date(t); }
         }
-        rows.push({ mag: geo.mag, html: '<div class="mt-row"><b>' + c.name + "</b>" +
-          "<span>예상 " + geo.mag.toFixed(1) + "등급</span>" +
-          '<span class="mt-zhr">' + (winS
-            ? fmtTime(winS) + "~" + fmtTime(winE) + " · 최고 " + Math.round(maxAlt) + "° " + dirName(maxAz)
-            : "오늘 밤 지평선 아래") + "</span></div>" });
+        rows.push({
+          mag: geo.mag, c: c, geo: geo,
+          maxAlt: maxAlt, maxAz: maxAz, winS: winS, winE: winE,
+          html: '<div class="mt-row"><b>' + c.name + "</b>" +
+            "<span>예상 " + geo.mag.toFixed(1) + "등급</span>" +
+            '<span class="mt-zhr">' + (winS
+              ? fmtTime(winS) + "~" + fmtTime(winE) + " · 최고 " + Math.round(maxAlt) + "° " + dirName(maxAz)
+              : "오늘 밤 지평선 아래") + "</span></div>"
+        });
       });
       rows.sort(function (a, b) { return a.mag - b.mag; });
       box.innerHTML = rows.length
-        ? rows.slice(0, 8).map(function (r) { return r.html; }).join("") +
-          '<div class="detail" style="margin-top:6px">12등급보다 밝게 예측되는 혜성 · 실제 밝기는 크게 다를 수 있음</div>'
+        ? rows.slice(0, 8).map(function (r, i) {
+            return r.html.replace('class="mt-row"', 'class="mt-row comet-row" data-ci="' + i + '"');
+          }).join("") +
+          '<div class="detail" style="margin-top:6px">줄을 누르면 그래프·촬영 판정 · 밝기는 추정치</div>'
         : '<div class="detail">지금 12등급보다 밝게 예측되는 혜성이 없어요</div>';
+      var shown = rows.slice(0, 8);
+      box.querySelectorAll(".comet-row").forEach(function (el) {
+        el.style.cursor = "pointer";
+        el.addEventListener("click", function () {
+          renderCometDetail(shown[+el.dataset.ci], lat, lon, w);
+        });
+      });
     });
   };
+
+  function renderCometDetail(row, lat, lon, w) {
+    var box = $("comet-list");
+    var c = row.c, geo = row.geo;
+    // 밝기 추이: 오늘 vs +10일
+    var magNow = geo.mag;
+    var magLater = cometGeo(c, new Date(Date.now() + 10 * 86400000)).mag;
+    var trend = magLater < magNow - 0.15 ? "밝아지는 중 ↑" : magLater > magNow + 0.15 ? "어두워지는 중 ↓" : "비슷하게 유지";
+
+    // 촬영 판정
+    var verdict, vcls;
+    if (row.maxAlt < 10) { verdict = "오늘 밤 부적합 — 지평선 근처"; vcls = "warn"; }
+    else if (magNow <= 8 && row.maxAlt >= 25) { verdict = "★ 촬영 강추 — 밝고 높이 뜸"; vcls = ""; }
+    else if (magNow <= 10 && row.maxAlt >= 15) { verdict = "도전할 만함 — 드워프·망원렌즈 장노출"; vcls = ""; }
+    else { verdict = "어려움 — 어둡거나 낮음, 큰 장비 필요"; vcls = "warn"; }
+
+    var mid = new Date((w.ds.getTime() + w.de.getTime()) / 2);
+    var mf = SunCalc.getMoonIllumination(mid).fraction;
+    var mAlt = SunCalc.getMoonPosition(mid, lat, lon).altitude;
+    var moonNote = mAlt > 0 ? "달 떠 있음 · 밝기 " + Math.round(mf * 100) + "%" : "한밤에 달 없음";
+
+    box.innerHTML =
+      '<button class="btn-back" id="comet-back">← 혜성 목록</button>' +
+      '<div class="big" style="margin-top:8px">☄️ ' + c.name + "</div>" +
+      '<div class="badge' + (vcls ? " warn" : "") + '" style="margin-top:8px">' + verdict + "</div>" +
+      '<canvas id="comet-chart" style="width:100%;height:170px;margin-top:12px"></canvas>' +
+      '<div class="chart-legend"><span class="lg-obj">━ 혜성</span> <span class="lg-moon">┄ 달</span> · 진한 배경 = 완전한 어둠</div>' +
+      '<div class="row"><span>예상 밝기</span><b>' + magNow.toFixed(1) + "등급 · " + trend + "</b></div>" +
+      (row.winS ? '<div class="row"><span>오늘 밤 적기</span><b>' + fmtTime(row.winS) + " ~ " + fmtTime(row.winE) +
+        " · 최고 " + Math.round(row.maxAlt) + "° " + dirName(row.maxAz) + "</b></div>" : "") +
+      '<div class="row"><span>오늘 달</span><b>' + moonNote + "</b></div>" +
+      '<div class="detail" style="margin-top:6px">혜성 밝기는 예측 오차가 큽니다. 꼬리가 활발하면 등급보다 잘 보여요.</div>';
+    $("comet-back").addEventListener("click", function () { window.renderComets(); });
+
+    // 고도 그래프
+    var canvas = $("comet-chart");
+    var dpr = window.devicePixelRatio || 1;
+    var W = canvas.clientWidth, H = canvas.clientHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    var g = canvas.getContext("2d");
+    g.scale(dpr, dpr);
+    var padL = 26, padB = 18, padT = 6;
+    var t0 = w.s.getTime(), t1 = w.e.getTime();
+    var X = function (t) { return padL + (t - t0) / (t1 - t0) * (W - padL - 4); };
+    var Y = function (a) { return padT + (1 - a / 90) * (H - padT - padB); };
+    g.fillStyle = "#1e2650";
+    g.fillRect(padL, padT, W - padL - 4, H - padT - padB);
+    g.fillStyle = "#0b1026";
+    g.fillRect(X(w.ds.getTime()), padT, X(w.de.getTime()) - X(w.ds.getTime()), H - padT - padB);
+    g.strokeStyle = "rgba(154,163,207,0.5)";
+    g.setLineDash([4, 4]);
+    g.beginPath(); g.moveTo(padL, Y(30)); g.lineTo(W - 4, Y(30)); g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = "#9aa3cf";
+    g.font = "10px sans-serif";
+    g.textAlign = "right";
+    [0, 30, 60, 90].forEach(function (a) { g.fillText(a + "°", padL - 4, Y(a) + 3); });
+    g.textAlign = "center";
+    var dd0 = new Date(t0); dd0.setMinutes(0, 0, 0);
+    for (var t = dd0.getTime(); t <= t1; t += 3600000) {
+      var hh = new Date(t).getHours();
+      if (hh % 2 === 0 && t >= t0) g.fillText(hh + "시", X(t), H - 5);
+    }
+    // 달
+    g.strokeStyle = "rgba(154,163,207,0.8)";
+    g.setLineDash([2, 4]);
+    g.beginPath();
+    var started = false;
+    for (t = t0; t <= t1; t += 10 * 60000) {
+      var ma = SunCalc.getMoonPosition(new Date(t), lat, lon).altitude * 57.29578;
+      if (ma < 0) { started = false; continue; }
+      if (!started) { g.moveTo(X(t), Y(ma)); started = true; } else g.lineTo(X(t), Y(ma));
+    }
+    g.stroke();
+    g.setLineDash([]);
+    // 혜성 (시각마다 위치 재계산 — 혜성은 하룻밤에도 움직임)
+    g.strokeStyle = "#7fd6c2";
+    g.lineWidth = 2.5;
+    g.beginPath();
+    started = false;
+    for (t = t0; t <= t1; t += 10 * 60000) {
+      var cg = cometGeo(c, new Date(t));
+      var p = altAzOf(cg.ra, cg.dec, new Date(t), lat, lon);
+      if (p.alt < 0) { started = false; continue; }
+      if (!started) { g.moveTo(X(t), Y(p.alt)); started = true; } else g.lineTo(X(t), Y(p.alt));
+    }
+    g.stroke();
+    g.lineWidth = 1;
+  }
 
   window.TodayStarExtras = {
     render: function (date, lat, lon) {
