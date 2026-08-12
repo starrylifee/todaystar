@@ -217,12 +217,18 @@
         '<div class="spot-meta">하늘 밝기 ' + info.mpsas.toFixed(2) + " mag/arcsec² · LP존 " + info.zone +
         " · 내 위치에서 " + fmtDist(d) + "</div>" +
         '<div class="spot-actions">' +
-        '<button id="spot-toilet-kakao">🚻 주변 화장실 (카카오맵)</button>' +
-        '<button id="spot-toilet-google">구글지도</button>' +
+        '<button id="spot-setloc">📍 여기를 기준 위치로</button>' +
+        '<button id="spot-toilet-kakao">🚻 화장실</button>' +
+        '<button id="spot-toilet-google">구글</button>' +
         "</div>";
       $("spot-close").addEventListener("click", function () {
         card.classList.add("hidden");
         if (marker) marker.remove();
+      });
+      $("spot-setloc").addEventListener("click", function () {
+        if (window.TodayStarSetLoc) window.TodayStarSetLoc(lat, lon);
+        this.textContent = "✓ 기준 위치로 설정됨";
+        this.disabled = true;
       });
       $("spot-toilet-kakao").addEventListener("click", function () {
         // 폰: 카카오맵 앱 검색, 앱이 없으면 무반응이라 웹 지도로도 안내
@@ -264,6 +270,83 @@
     lpVisible = !lpVisible;
     map.setLayoutProperty("lp-overlay", "visibility", lpVisible ? "visible" : "none");
     this.classList.toggle("on", lpVisible);
+  });
+
+  /* ---------- 구름 위성영상 (히마와리, 10분 간격, 최근 6시간) ---------- */
+  var HIMA = "https://www.jma.go.jp/bosai/himawari/data/satimg/";
+  var cloudFrames = null, cloudOn = false, cloudTimer = null;
+
+  function himaTiles(bt) {
+    return [HIMA + bt + "/fd/" + bt + "/B13/TBB/{z}/{x}/{y}.jpg"];
+  }
+  function frameLabel(bt) {
+    var d = new Date(Date.UTC(+bt.slice(0, 4), +bt.slice(4, 6) - 1, +bt.slice(6, 8), +bt.slice(8, 10), +bt.slice(10, 12)));
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+  function setCloudFrame(i) {
+    var bt = cloudFrames[i];
+    map.getSource("clouds").setTiles(himaTiles(bt));
+    $("cloud-time").textContent = frameLabel(bt);
+    $("cloud-slider").value = i;
+  }
+
+  $("btn-cloud").addEventListener("click", function () {
+    var btn = this;
+    cloudOn = !cloudOn;
+    btn.classList.toggle("on", cloudOn);
+    $("cloud-bar").classList.toggle("hidden", !cloudOn);
+    if (!cloudOn) {
+      if (map.getLayer("clouds")) map.setLayoutProperty("clouds", "visibility", "none");
+      if (cloudTimer) { clearInterval(cloudTimer); cloudTimer = null; $("cloud-play").textContent = "▶"; }
+      return;
+    }
+    if (map.getLayer("clouds")) {
+      map.setLayoutProperty("clouds", "visibility", "visible");
+      return;
+    }
+    $("cloud-time").textContent = "불러오는 중…";
+    fetch(HIMA + "targetTimes_fd.json")
+      .then(function (r) { return r.json(); })
+      .then(function (times) {
+        // 최근 6시간 = 37프레임 (10분 간격)
+        var all = times.map(function (t) { return t.basetime; });
+        cloudFrames = all.slice(-37);
+        $("cloud-slider").max = cloudFrames.length - 1;
+        map.addSource("clouds", {
+          type: "raster",
+          tiles: himaTiles(cloudFrames[cloudFrames.length - 1]),
+          tileSize: 256,
+          maxzoom: 5,
+          attribution: "구름: 히마와리 위성(JMA)"
+        });
+        map.addLayer(
+          { id: "clouds", type: "raster", source: "clouds", paint: { "raster-opacity": 0.55 } },
+          map.getLayer("hills") ? "hills" : undefined
+        );
+        setCloudFrame(cloudFrames.length - 1);
+      })
+      .catch(function () {
+        $("cloud-time").textContent = "위성영상 불러오기 실패";
+      });
+  });
+
+  $("cloud-slider").addEventListener("input", function () {
+    if (cloudFrames) setCloudFrame(+this.value);
+  });
+
+  $("cloud-play").addEventListener("click", function () {
+    if (!cloudFrames) return;
+    if (cloudTimer) {
+      clearInterval(cloudTimer); cloudTimer = null;
+      this.textContent = "▶";
+      return;
+    }
+    this.textContent = "⏸";
+    var i = +$("cloud-slider").value;
+    cloudTimer = setInterval(function () {
+      i = (i + 1) % cloudFrames.length;
+      setCloudFrame(i);
+    }, 350);
   });
 
   /* ---------- 탭 연동 ---------- */

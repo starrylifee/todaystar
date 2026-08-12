@@ -242,6 +242,14 @@
     );
   }
 
+  // 지도에서 기준 위치를 직접 설정 (관측지 탭에서 호출)
+  window.TodayStarSetLoc = function (lat, lon) {
+    setLocation(lat, lon, null);
+    reverseGeocode(lat, lon).then(function (name) {
+      if (name) setLocation(lat, lon, name + " (직접 설정)");
+    });
+  };
+
   function loadSaved() {
     try {
       var s = JSON.parse(localStorage.getItem(LS_KEY));
