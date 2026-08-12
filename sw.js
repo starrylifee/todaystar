@@ -1,4 +1,4 @@
-var CACHE = "todaystar-v13";
+var CACHE = "todaystar-v14";
 var SHELL = [
   "./",
   "index.html",

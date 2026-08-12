@@ -305,7 +305,9 @@
     } else {
       when = "오늘 밤 안 보임";
     }
-    var meta = (TYPE_KO[o[4]] || o[4]) + (o[7] != null ? " · " + o[7].toFixed(1) + "등급" : "");
+    var meta = (TYPE_KO[o[4]] || o[4]) +
+      (o[7] != null ? " · " + o[7].toFixed(1) + "등급" : "") +
+      (o[8] != null ? " · " + (o[8] >= 60 ? (o[8] / 60).toFixed(1) + "°" : Math.round(o[8]) + "′") : "");
     return '<div class="t-row" data-i="' + i + '">' +
       '<img class="t-thumb" loading="lazy" data-src="' + thumbURL(o, 96) + '" alt="">' +
       '<div class="t-info"><div class="t-name">' + objTitle(o) + ' <span class="t-type">' + meta + "</span></div>" +
