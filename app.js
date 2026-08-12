@@ -127,6 +127,18 @@
       $("dark-length").textContent = "이 날은 하늘이 완전히 어두워지지 않습니다";
     }
 
+    // 구름 예보 (16일 이내)
+    var cn = $("cloud-note");
+    cn.textContent = "";
+    if (window.getClouds && isValid(darkStart) && isValid(darkEnd)) {
+      window.getClouds(lat, lon).then(function (cd) {
+        var avg = window.cloudAvg(cd, darkStart.getTime(), darkEnd.getTime());
+        if (avg != null && sameDay(d, state.date)) {
+          cn.textContent = window.cloudLabel(avg) + " (밤 평균 예보)";
+        }
+      });
+    }
+
     // 달 정보: 밤의 중간 시각 기준
     var midNight = (isValid(darkStart) && isValid(darkEnd))
       ? new Date((darkStart.getTime() + darkEnd.getTime()) / 2)

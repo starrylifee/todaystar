@@ -130,6 +130,11 @@
   function render() {
     rendered = true;
     var loc = getLoc();
+    var p = window.getClouds ? window.getClouds(loc.lat, loc.lon) : Promise.resolve(null);
+    p.then(function (cd) { renderAll(loc, cd); });
+  }
+
+  function renderAll(loc, cd) {
     var today = new Date();
     var g = goldenTime(today, loc.lat, loc.lon);
 
@@ -173,19 +178,23 @@
       var mf = SunCalc.getMoonIllumination(d).fraction;
       var moonUp = mpos.altitude > 0;
       var moonOK = !moonUp || mf < MOON_OK;
+      var cloud = window.cloudAt ? window.cloudAt(cd, t) : null;
       var verdict, cls;
       if (!inDark) { verdict = "박명 (하늘 밝음)"; cls = "dim"; }
       else if (!moonOK) { verdict = "달빛 간섭 " + Math.round(mf * 100) + "%"; cls = "warn"; }
+      else if (cloud != null && cloud >= 70) { verdict = "구름 " + cloud + "%"; cls = "warn"; }
       else if (core.alt >= MIN_ALT) { verdict = "★ 중심부 촬영 최적"; cls = "best"; }
       else if (band.maxAlt >= 50) { verdict = "밴드 촬영 좋음"; cls = "good"; }
       else if (band.maxAlt >= 20) { verdict = "밴드 낮음"; cls = "dim"; }
       else { verdict = "은하수 낮음"; cls = "dim"; }
+      var cloudTxt = (cloud != null && cls !== "warn") ? ' · <span class="' + (cloud >= 40 ? "mw-cloud-some" : "") + '">구름 ' + cloud + "%</span>" : "";
       rows.push(
         '<div class="mw-hour ' + cls + '">' +
         '<div class="mw-hour-top"><b>' + d.getHours() + "시</b>" +
         "<span>중심부 " + (core.alt > 0 ? dirName(core.az) + " " + Math.round(core.alt) + "°" : "지평선 아래") + "</span>" +
         '<span class="mw-verdict">' + verdict + "</span></div>" +
-        '<div class="mw-band">' + band.text + (moonUp && moonOK && inDark ? " · 달 " + Math.round(mf * 100) + "%" : "") + "</div></div>"
+        '<div class="mw-band">' + band.text +
+        (moonUp && moonOK && inDark ? " · 달 " + Math.round(mf * 100) + "%" : "") + cloudTxt + "</div></div>"
       );
     }
     hoursBox.innerHTML = rows.join("");
@@ -209,6 +218,8 @@
         var mf = SunCalc.getMoonIllumination(mid).fraction;
         var moonUp = SunCalc.getMoonPosition(mid, loc.lat, loc.lon).altitude > 0;
         var moonLabel = moonUp ? "🌙" + Math.round(mf * 100) + "%" : "달 없음";
+        var cAvg = window.cloudAvg ? window.cloudAvg(cd, r.g.window[0].getTime(), r.g.window[1].getTime()) : null;
+        var cloudCol = cAvg == null ? "" : (cAvg < 25 ? "☀️" + cAvg + "%" : cAvg < 60 ? "⛅" + cAvg + "%" : "☁️" + cAvg + "%");
         var dd = r.d;
         var label = (dd.getMonth() + 1) + "/" + dd.getDate() + " (" + WEEKDAYS[dd.getDay()] + ")";
         var isToday = dd.toDateString() === today.toDateString();
@@ -216,7 +227,8 @@
           "<b>" + (isToday ? "오늘 · " : "") + label + "</b>" +
           "<span>" + fmtTime(r.g.window[0]) + "~" + fmtTime(r.g.window[1]) + "</span>" +
           '<span class="mw-dur">' + fmtDur(r.g.total) + "</span>" +
-          '<span class="mw-moon">' + moonLabel + "</span></div>";
+          '<span class="mw-moon">' + moonLabel + "</span>" +
+          '<span class="mw-cloudcol">' + cloudCol + "</span></div>";
       }).join("");
     }
 

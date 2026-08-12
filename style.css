@@ -333,6 +333,8 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 .mw-hour.warn .mw-verdict { color: #e07b5a; }
 .mw-hour.dim .mw-verdict { color: var(--dim); font-weight: 400; }
 .mw-band { color: var(--dim); font-size: 0.8rem; margin-top: 3px; line-height: 1.5; }
+.mw-cloud-some { color: var(--accent); }
+.mw-cloudcol { min-width: 4.2em; text-align: right; font-size: 0.82rem; }
 
 /* 자동 스트레칭 적용된 사진은 CSS 밝기 보정 해제 */
 .t-thumb.enhanced, .d-thumb.enhanced, #lightbox-img.enhanced {

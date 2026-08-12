@@ -1,9 +1,10 @@
-var CACHE = "todaystar-v5";
+var CACHE = "todaystar-v6";
 var SHELL = [
   "./",
   "index.html",
   "style.css",
   "app.js",
+  "weather.js",
   "targets.js",
   "milkyway.js",
   "spots.js",
