@@ -40,6 +40,21 @@
   var IDX = null;        // 검색 인덱스
   var current = null;    // 상세 화면에 떠 있는 객체 index
 
+  // 유형 필터 그룹
+  var TYPE_GROUPS = {
+    gal: { G: 1, GPair: 1, GTrpl: 1, GGroup: 1 },
+    ocl: { OCl: 1, "Cl+N": 1, "*Ass": 1 },
+    gcl: { GCl: 1 },
+    neb: { HII: 1, EmN: 1, Neb: 1, RfN: 1, DrkN: 1 },
+    pn: { PN: 1 },
+    snr: { SNR: 1 }
+  };
+  var typeFilter = "all";
+  function passFilter(o) {
+    if (typeFilter === "all") return true;
+    return !!TYPE_GROUPS[typeFilter][o[4]];
+  }
+
   /* ---------- 위치 ---------- */
   function getLoc() {
     try {
@@ -306,14 +321,17 @@
 
     var items, title;
     if (q && norm(q)) {
-      items = search(q);
-      title = items.length ? "검색 결과" : "검색 결과 없음 — M31, NGC 7000처럼 입력해보세요";
+      items = search(q).filter(function (i) { return passFilter(CAT[i]); });
+      title = items.length ? "검색 결과" : "검색 결과 없음 — M31, NGC 7000처럼 입력하거나 필터를 확인하세요";
     } else {
-      // 오늘 밤 추천: 유명한 대상 중 어둠 속 30°↑
+      // 오늘 밤 추천: 유명한 대상(또는 필터 유형 전체) 중 어둠 속 30°↑
       var famous = [];
       for (var i = 0; i < CAT.length; i++) {
         var o = CAT[i];
-        if ((o[0][0] === "M" && o[0][1] >= "0" && o[0][1] <= "9") || o[2]) famous.push(i);
+        if (!passFilter(o)) continue;
+        var isFamous = (o[0][0] === "M" && o[0][1] >= "0" && o[0][1] <= "9") || o[2];
+        // 유형 필터를 걸면 유명하지 않아도 9등급 이내까지 포함
+        if (isFamous || (typeFilter !== "all" && o[7] != null && o[7] <= 9)) famous.push(i);
       }
       var scored = [];
       famous.forEach(function (i) {
@@ -525,6 +543,17 @@
 
   document.querySelectorAll(".tabbar button").forEach(function (b) {
     b.addEventListener("click", function () { showView(b.dataset.view); });
+  });
+
+  document.querySelectorAll("#type-chips button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      typeFilter = b.dataset.t;
+      document.querySelectorAll("#type-chips button").forEach(function (x) {
+        x.classList.toggle("active", x === b);
+      });
+      current = null;
+      renderList($("target-search").value);
+    });
   });
 
   ["hour-start", "hour-end"].forEach(function (id) {
