@@ -240,8 +240,12 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   height: 56px;
   border-radius: 10px;
   object-fit: cover;
-  background: #0b1026;
   flex: none;
+  /* 실측 서베이 사진이 어두워서 밝기 보정 */
+  filter: brightness(1.7) contrast(1.12) saturate(1.4);
+  background: linear-gradient(110deg, #131a3a 40%, #232c5c 50%, #131a3a 60%);
+  background-size: 250% 100%;
+  animation: thumb-loading 1.4s linear infinite;
 }
 .t-info { flex: 1; min-width: 0; }
 .d-head { display: flex; align-items: flex-start; gap: 14px; justify-content: space-between; }
@@ -250,9 +254,16 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   height: 96px;
   border-radius: 12px;
   object-fit: cover;
-  background: #0b1026;
   flex: none;
   margin-top: 8px;
+  filter: brightness(1.7) contrast(1.12) saturate(1.4);
+  background: linear-gradient(110deg, #131a3a 40%, #232c5c 50%, #131a3a 60%);
+  background-size: 250% 100%;
+  animation: thumb-loading 1.4s linear infinite;
+}
+@keyframes thumb-loading {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
 }
 .t-name { font-size: 1.02rem; }
 .t-name b { color: var(--accent); }
