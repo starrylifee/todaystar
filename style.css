@@ -265,6 +265,41 @@ body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   from { background-position: 100% 0; }
   to { background-position: -100% 0; }
 }
+
+#lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 18, 0.92);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px;
+  cursor: pointer;
+}
+#lightbox-img {
+  max-width: min(92vw, 620px);
+  max-height: 72vh;
+  border-radius: 16px;
+  filter: brightness(1.7) contrast(1.12) saturate(1.4);
+  background: linear-gradient(110deg, #131a3a 40%, #232c5c 50%, #131a3a 60%);
+  background-size: 250% 100%;
+  animation: thumb-loading 1.4s linear infinite;
+  min-width: 240px;
+  min-height: 240px;
+  object-fit: contain;
+}
+#lightbox-cap { font-size: 1.1rem; font-weight: 700; }
+.lightbox-hint { color: var(--dim); font-size: 0.8rem; }
+
+/* 자동 스트레칭 적용된 사진은 CSS 밝기 보정 해제 */
+.t-thumb.enhanced, .d-thumb.enhanced, #lightbox-img.enhanced {
+  filter: saturate(1.2);
+  animation: none;
+  background: #0b1026;
+}
 .t-name { font-size: 1.02rem; }
 .t-name b { color: var(--accent); }
 .t-type { color: var(--dim); font-size: 0.8rem; }

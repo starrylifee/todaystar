@@ -217,6 +217,61 @@
       "&width=" + px + "&height=" + px + "&format=jpg";
   }
 
+  // 천체사진식 자동 스트레칭: 배경(하위 20%)을 검은 점으로, 상위 0.2%를 흰 점으로
+  function enhanceImg(img) {
+    if (img.dataset.done) return;
+    try {
+      var w = img.naturalWidth, h = img.naturalHeight;
+      if (!w || !h) return;
+      var c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      var g = c.getContext("2d");
+      g.drawImage(img, 0, 0);
+      var im = g.getImageData(0, 0, w, h), px = im.data;
+      var hist = new Uint32Array(256), i, n = px.length / 4;
+      for (i = 0; i < px.length; i += 4) {
+        hist[(0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]) | 0]++;
+      }
+      var cum = 0, lo = 0, hi = 255;
+      for (i = 0; i < 256; i++) { cum += hist[i]; if (cum >= n * 0.20) { lo = i; break; } }
+      cum = 0;
+      for (i = 255; i >= 0; i--) { cum += hist[i]; if (cum >= n * 0.002) { hi = i; break; } }
+      if (hi - lo < 12) hi = lo + 12;
+      var lut = new Uint8Array(256);
+      for (i = 0; i < 256; i++) {
+        var v = (i - lo) / (hi - lo);
+        v = Math.max(0, Math.min(1, v));
+        lut[i] = Math.pow(v, 0.8) * 255;
+      }
+      for (i = 0; i < px.length; i += 4) {
+        px[i] = lut[px[i]]; px[i + 1] = lut[px[i + 1]]; px[i + 2] = lut[px[i + 2]];
+      }
+      g.putImageData(im, 0, 0);
+      img.dataset.done = "1";
+      img.src = c.toDataURL("image/jpeg", 0.92);
+      img.classList.add("enhanced");
+    } catch (e) { /* CORS 실패 시 CSS 밝기 보정 유지 */ }
+  }
+  function attachEnhance(img, url) {
+    img.crossOrigin = "anonymous";
+    img.addEventListener("load", function () { enhanceImg(img); });
+    img.src = url;
+  }
+
+  function openLightbox(o) {
+    var img = $("lightbox-img");
+    img.dataset.done = "";
+    img.classList.remove("enhanced");
+    img.removeAttribute("src");
+    attachEnhance(img, thumbURL(o, 512));
+    $("lightbox-cap").innerHTML = objTitle(o);
+    $("lightbox").classList.remove("hidden");
+  }
+  $("lightbox").addEventListener("click", function () {
+    this.classList.add("hidden");
+    $("lightbox-img").src = "";
+  });
+
   function objTitle(o) {
     var t = "<b>" + o[0] + "</b>";
     if (o[2]) t += " " + o[2];
@@ -237,7 +292,7 @@
     }
     var meta = (TYPE_KO[o[4]] || o[4]) + (o[7] != null ? " · " + o[7].toFixed(1) + "등급" : "");
     return '<div class="t-row" data-i="' + i + '">' +
-      '<img class="t-thumb" loading="lazy" src="' + thumbURL(o, 96) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+      '<img class="t-thumb" loading="lazy" data-src="' + thumbURL(o, 96) + '" alt="">' +
       '<div class="t-info"><div class="t-name">' + objTitle(o) + ' <span class="t-type">' + meta + "</span></div>" +
       '<div class="t-when ' + (ana.window ? "ok" : "") + '">' + when + "</div></div></div>";
   }
@@ -287,6 +342,15 @@
     box.innerHTML = html;
     box.querySelectorAll(".t-row").forEach(function (el) {
       el.addEventListener("click", function () { renderDetail(+el.dataset.i); });
+      var th = el.querySelector(".t-thumb");
+      if (th) {
+        th.addEventListener("click", function (e) {
+          e.stopPropagation();
+          openLightbox(CAT[+el.dataset.i]);
+        });
+        th.addEventListener("error", function () { th.style.visibility = "hidden"; });
+        attachEnhance(th, th.dataset.src);
+      }
     });
   }
 
@@ -332,7 +396,7 @@
       '<button id="btn-back" class="btn-back">← 목록으로</button>' +
       '<div class="d-head"><div><div class="big" style="margin-top:8px">' + objTitle(o) + "</div>" +
       '<div class="detail">' + meta + "</div></div>" +
-      '<img class="d-thumb" loading="lazy" src="' + thumbURL(o, 220) + '" alt="" onerror="this.style.display=\'none\'"></div>' +
+      '<img class="d-thumb" loading="lazy" data-src="' + thumbURL(o, 220) + '" alt=""></div>' +
       '<div class="' + badgeCls + '" style="margin-top:10px">' + badge + "</div>" +
       '<canvas id="alt-chart" style="width:100%;height:170px;margin-top:14px"></canvas>' +
       '<div class="chart-legend"><span class="lg-obj">━ 대상</span> <span class="lg-moon">┄ 달</span> · 진한 배경 = 완전한 어둠</div>' +
@@ -346,6 +410,15 @@
       current = null;
       renderList($("target-search").value);
     });
+    var dth = d.querySelector(".d-thumb");
+    if (dth) {
+      dth.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openLightbox(o);
+      });
+      dth.addEventListener("error", function () { dth.style.display = "none"; });
+      attachEnhance(dth, dth.dataset.src);
+    }
     drawChart($("alt-chart"), o, ctx, loc);
     d.scrollIntoView({ behavior: "instant", block: "start" });
   }
