@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.starrylifee.byeolbolil",
+    "sha256_cert_fingerprints": ["8A:0C:74:1F:84:B4:9A:18:1A:FB:C9:15:AD:0E:0A:09:6E:2C:93:C1:E2:54:59:0C:33:13:39:B2:4C:8B:7E:E7"]
+  }
+}]

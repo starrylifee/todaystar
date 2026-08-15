@@ -1,6 +1,6 @@
 {
-  "name": "오늘별 — 오늘 밤하늘 관측 정보",
-  "short_name": "오늘별",
+  "name": "별볼일 — 오늘 밤하늘 관측 정보",
+  "short_name": "별볼일",
   "description": "내 위치의 월령, 일출·일몰, 천문박명, 오늘 밤 관측 시간을 한눈에.",
   "start_url": ".",
   "display": "standalone",
