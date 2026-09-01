@@ -550,12 +550,29 @@
     Promise.all([vworldSearch(q), nominatimSearch(q)]).then(function (rs) {
       var merged = local.concat(rs[0], rs[1]).slice(0, 7);
       if (!merged.length) {
-        box.innerHTML = '<div class="sr-empty">"' + q + '" 결과 없음 — 근처 큰 지명(면·읍·산 이름)으로 검색한 뒤 지도에서 직접 눌러보세요</div>';
+        var empty = document.createElement("div");
+        empty.className = "sr-empty";
+        empty.textContent = '"' + q + '" 결과 없음 — 근처 큰 지명(면·읍·산 이름)으로 검색한 뒤 지도에서 직접 눌러보세요';
+        box.textContent = "";
+        box.appendChild(empty);
         return;
       }
-      box.innerHTML = merged.map(function (r, i) {
-        return '<div class="sr-item" data-i="' + i + '"><b>' + r.name + "</b><span>" + (r.addr || "") + "</span></div>";
-      }).join("");
+      box.textContent = "";
+      merged.forEach(function (r, i) {
+        var item = document.createElement("div");
+        item.className = "sr-item";
+        item.dataset.i = String(i);
+
+        var name = document.createElement("b");
+        name.textContent = String(r.name == null ? "" : r.name);
+        item.appendChild(name);
+
+        var addr = document.createElement("span");
+        addr.textContent = String(r.addr == null ? "" : r.addr);
+        item.appendChild(addr);
+
+        box.appendChild(item);
+      });
       box.querySelectorAll(".sr-item").forEach(function (el) {
         el.addEventListener("click", function () { goToResult(merged[+el.dataset.i]); });
       });

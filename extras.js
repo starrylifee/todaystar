@@ -6,6 +6,11 @@
   var RAD = Math.PI / 180;
   var DIRS = ["북", "북동", "동", "남동", "남", "남서", "서", "북서"];
   function dirName(az) { return DIRS[Math.floor(((az + 22.5) % 360) / 45)]; }
+  function escapeHTML(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  }
   function fmtTime(d) {
     if (!(d instanceof Date) || isNaN(d)) return "—";
     return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
@@ -505,7 +510,7 @@
         rows.push({
           mag: geo.mag, c: c, geo: geo,
           maxAlt: maxAlt, maxAz: maxAz, winS: winS, winE: winE,
-          html: '<div class="mt-row"><b>' + c.name + "</b>" +
+          html: '<div class="mt-row"><b>' + escapeHTML(c.name) + "</b>" +
             "<span>예상 " + geo.mag.toFixed(1) + "등급</span>" +
             '<span class="mt-zhr">' + (winS
               ? fmtTime(winS) + "~" + fmtTime(winE) + " · 최고 " + Math.round(maxAlt) + "° " + dirName(maxAz)
@@ -551,7 +556,7 @@
 
     box.innerHTML =
       '<button class="btn-back" id="comet-back">← 혜성 목록</button>' +
-      '<div class="big" style="margin-top:8px">☄️ ' + c.name + "</div>" +
+      '<div class="big" style="margin-top:8px">☄️ ' + escapeHTML(c.name) + "</div>" +
       '<div class="badge' + (vcls ? " warn" : "") + '" style="margin-top:8px">' + verdict + "</div>" +
       '<canvas id="comet-chart" style="width:100%;height:170px;margin-top:12px"></canvas>' +
       '<div class="chart-legend"><span class="lg-obj">━ 혜성</span> <span class="lg-moon">┄ 달</span> · 진한 배경 = 완전한 어둠</div>' +
