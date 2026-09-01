@@ -202,6 +202,31 @@
       var right = xn > W - 32;
       g.textAlign = right ? "right" : "left";
       g.fillText("지금", xn + (right ? -3 : 3), padT + 9);
+    } else if (now < t0 && isToday(date)) {
+      /* 낮에 열면 지금은 그래프 왼쪽 바깥이다. 선이 없으면 "왜 지금이 없지"
+         하고 찾게 되므로 아직 밤이 아니라고 적어 준다. 어제·내일을 넘겨
+         보는 중이라면 지금과 상관없는 밤이라 아무것도 적지 않는다. */
+      noteText("밤 시작 전 · 일몰 " + fmtTime(w.s) + "까지 " + gapText(t0 - now),
+        "밤 시작 " + gapText(t0 - now) + " 전");
+    }
+
+    /* 그래프 왼쪽 위에 한 줄. 폭이 좁으면 짧은 쪽으로 적는다. */
+    function noteText(full, short) {
+      g.fillStyle = NOW_COLOR;
+      g.font = "bold 10px sans-serif";
+      g.textAlign = "left";
+      var room = W - padL - 8;
+      g.fillText(g.measureText(full).width <= room ? full : short, padL + 4, padT + 9);
+    }
+    function gapText(ms) {
+      var m = Math.max(0, Math.round(ms / 60000));
+      var h = Math.floor(m / 60);
+      return h ? h + "시간 " + (m % 60) + "분" : m + "분";
+    }
+    function isToday(d) {
+      var n = new Date(now);
+      return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth()
+        && d.getDate() === n.getDate();
     }
 
     g.lineWidth = 1;
