@@ -95,16 +95,23 @@
   }
 
   var PLANET_COLORS = ["#9aa3cf", "#ffe08a", "#ff7a5c", "#ffb46b", "#7fd6c2"];
+  var MOON_COLOR = "#f2f5ff";
+  var NOW_COLOR = "#ff8fa3";
+
+  var lastPlanetArgs = null;   // '지금' 선을 1분마다 다시 그리려고 기억해 둔다
 
   function renderPlanets(date, lat, lon) {
     var canvas = $("planet-chart");
     var legend = $("planet-legend");
     if (!canvas || !legend) return;
+    lastPlanetArgs = { date: date, lat: lat, lon: lon };
     var w = nightSpan(date, lat, lon);
     var mid = new Date((w.s.getTime() + w.e.getTime()) / 2);
 
     var dpr = window.devicePixelRatio || 1;
     var W = canvas.clientWidth, H = canvas.clientHeight;
+    // 다른 탭에 가려져 있으면 폭이 0이다 — 그리면 캔버스만 망가진다
+    if (!W || !H) return;
     canvas.width = W * dpr; canvas.height = H * dpr;
     var g = canvas.getContext("2d");
     g.scale(dpr, dpr);
@@ -131,7 +138,29 @@
       if (hh % 2 === 0 && t >= t0) g.fillText(hh + "시", X(t), H - 5);
     }
 
-    var legendHTML = "";
+    /* 달 — 하루에 13°씩 옮겨 가므로 행성처럼 한 시각으로 고정하지 않고
+       10분마다 다시 잰다. SunCalc 의 방위는 남쪽이 0이라 북쪽 기준으로 돌린다. */
+    var mIll = Math.round(SunCalc.getMoonIllumination(mid).fraction * 100);
+    var mMax = -90, mMaxT = null, mMaxAz = 0, mStarted = false;
+    g.strokeStyle = MOON_COLOR;
+    g.lineWidth = 2.5;
+    g.beginPath();
+    for (var mt = t0; mt <= t1; mt += 10 * 60000) {
+      var mp = SunCalc.getMoonPosition(new Date(mt), lat, lon);
+      var mAlt = mp.altitude / RAD;
+      if (mAlt > mMax) { mMax = mAlt; mMaxT = new Date(mt); mMaxAz = rev(mp.azimuth / RAD + 180); }
+      if (mAlt < 0) { mStarted = false; continue; }
+      if (!mStarted) { g.moveTo(X(mt), Y(mAlt)); mStarted = true; }
+      else g.lineTo(X(mt), Y(mAlt));
+    }
+    g.stroke();
+
+    var legendHTML = '<span class="pl-leg"><i style="background:' + MOON_COLOR + '"></i>' +
+      "달(" + mIll + "%) " + (mMax < 5
+        ? '<span class="pl-no">안 뜸</span>'
+        : "<b>" + fmtTime(mMaxT) + "</b> " + Math.round(mMax) + "° " + dirName(mMaxAz)) +
+      "</span>";
+
     PLANETS.forEach(function (pl, pi) {
       var rd = planetRaDec(pi, mid);
       var maxAlt = -90, maxT = null, maxAz = 0, started = false;
@@ -152,6 +181,29 @@
       legendHTML += '<span class="pl-leg"><i style="background:' + PLANET_COLORS[pi] + '"></i>' +
         pl[0] + " " + status + "</span>";
     });
+
+    /* 지금 — 그래프 어디쯤 와 있는지 세로선으로 짚어 준다.
+       다른 날짜를 보고 있으면 이 밤 바깥이라 그려지지 않는다. */
+    var now = Date.now();
+    if (now >= t0 && now <= t1) {
+      var xn = X(now);
+      g.save();
+      g.strokeStyle = NOW_COLOR;
+      g.lineWidth = 1.5;
+      g.setLineDash([4, 3]);
+      g.beginPath();
+      g.moveTo(xn, padT);
+      g.lineTo(xn, H - padB);
+      g.stroke();
+      g.restore();
+      g.fillStyle = NOW_COLOR;
+      g.font = "bold 10px sans-serif";
+      // 오른쪽 끝에 붙으면 글자가 잘린다 — 그때는 선 왼쪽에 적는다
+      var right = xn > W - 32;
+      g.textAlign = right ? "right" : "left";
+      g.fillText("지금", xn + (right ? -3 : 3), padT + 9);
+    }
+
     g.lineWidth = 1;
     legend.innerHTML = legendHTML;
   }
@@ -622,6 +674,11 @@
     g.stroke();
     g.lineWidth = 1;
   }
+
+  // '지금' 선이 낡지 않게 1분마다 다시 그린다
+  setInterval(function () {
+    if (lastPlanetArgs) renderPlanets(lastPlanetArgs.date, lastPlanetArgs.lat, lastPlanetArgs.lon);
+  }, 60000);
 
   window.TodayStarExtras = {
     render: function (date, lat, lon) {
